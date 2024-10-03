@@ -6,6 +6,13 @@ import {LibString} from "./utils/LibString.sol";
 
 contract ERC721 is ERC721Base {
 
+    // the address of the original collection on Fantom
+    address public originalCollectionAddress;
+
+    // address allowed to mint, will likely be just bridge admin address
+    mapping(address => bool) private _minters;
+
+    // NFT Metadata
     string private _name;
     string private _symbol;
     string private _baseURI;
@@ -14,6 +21,7 @@ contract ERC721 is ERC721Base {
         _name = name;
         _symbol = symbol;
         _baseURI = baseURI;
+        _minters[msg.sender] = true;
     }
 
     function name() public override view returns (string memory) {
@@ -25,7 +33,12 @@ contract ERC721 is ERC721Base {
     }
 
     function tokenURI(uint256 tokenId) public override view returns (string memory) {
-        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+        if (!_exists(tokenId)) revert TokenDoesNotExist();
         return string(abi.encodePacked(_baseURI, LibString.toString(tokenId)));
+    }
+
+    function mint(address to, uint256 id) public {
+        require(_minters[msg.sender], "ERC721: FORBIDDEN");
+        _mint(to, id);
     }
 }
