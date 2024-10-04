@@ -1,4 +1,29 @@
 plugins:
   - name: solidity
+  - name: foundry
 
 contracts_folder: contracts
+
+networks:
+  custom:
+    - name: sonictest
+      chain_id: 64165
+      ecosystem: fantom
+      base_ecosystem_plugin: ethereum
+
+node:
+  fantom:
+    sonictest:
+      uri: https://rpc.testnet.soniclabs.com
+
+default_ecosystem: ethereum
+
+ethereum:
+  default_network: local
+  local:
+    default_provider: test
+
+fantom:
+  default_network: sonictest
+  sonictest:
+    default_provider: node
