@@ -12,15 +12,10 @@ contract ERC1155 is ERC1155Base {
     mapping(address => bool) private _minters;
     bool public mintingEnabled = true;
 
-    string private _uri;
-    string private _extension;
-
     // tokenURI overrides everything
     mapping(uint256 => string) private _tokenURIs;
 
-    constructor(address originalAddress, string memory uri, string memory extension) {
-        _uri = uri;
-        _extension = extension;
+    constructor(address originalAddress) {
         originalCollectionAddress = originalAddress;
         _minters[msg.sender] = true;
     }
@@ -45,8 +40,9 @@ contract ERC1155 is ERC1155Base {
     function uri(uint256 id) public view override returns (string memory) {
         if (bytes(_tokenURIs[id]).length > 0) {
             return _tokenURIs[id];
+        } else {
+            revert("ERC1155: URI not set");
         }
-        return string(abi.encodePacked(_uri, LibString.toString(id), _extension));
     }
 
     function batchSetTokenURIs(uint256 startId, string[] memory uris) public {

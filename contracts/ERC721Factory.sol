@@ -29,10 +29,10 @@ contract ERC721Factory {
         return newAddress;
     }
 
-    function deployERC1155(address originalAddress, string memory uri, string memory extension) public returns (address) {
+    function deployERC1155(address originalAddress) public returns (address) {
         require(canDeploy[msg.sender], "ERC721Factory: FORBIDDEN");
         require(bridgedAddressForOriginal[originalAddress] == address(0), "ERC721Factory: ALREADY_BRIDGED");
-        ERC1155 newCollection = new ERC1155(originalAddress, uri, extension);
+        ERC1155 newCollection = new ERC1155(originalAddress);
         newCollection.setCanMint(msg.sender);
         address newAddress = address(newCollection);
         bridgedAddressForOriginal[originalAddress] = newAddress;
