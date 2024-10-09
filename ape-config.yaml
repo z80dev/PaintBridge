@@ -1,6 +1,8 @@
 plugins:
   - name: solidity
   - name: foundry
+  - name: fantom
+  - name: alchemy
 
 contracts_folder: contracts
 
@@ -27,3 +29,6 @@ fantom:
   default_network: sonictest
   sonictest:
     default_provider: node
+
+solidity:
+  evm_version: paris
