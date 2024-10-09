@@ -22,6 +22,8 @@ def write_to_json(address):
 
 def main():
     deployer = accounts.load("painter")
+    deployer.set_autosign(True, " ")
+    project.provider.set_balance(deployer.address, 100 * 10**18)
     factory = NFT_FACTORY.deploy(sender=deployer)
     print(f"Factory deployed at {factory.address}")
     write_to_json(factory.address)
