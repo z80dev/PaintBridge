@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 # path to .env in parent directory
 dotenv_path = os.path.join(os.path.dirname(__file__), '../.env')
 load_dotenv(dotenv_path)
-print(os.environ.get('FLASK_ENV'))
 
 class Config:
     FLASK_ENV = os.environ.get('FLASK_ENV', 'development')

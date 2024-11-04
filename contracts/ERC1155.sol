@@ -2,22 +2,25 @@
 pragma solidity ^0.8.4;
 
 import {ERC1155Base} from "./ERC1155Base.sol";
+import {ERC2981} from "./ERC2981.sol";
 import {LibString} from "./utils/LibString.sol";
 
-contract ERC1155 is ERC1155Base {
+contract ERC1155 is ERC1155Base, ERC2981 {
 
     address public originalCollectionAddress;
 
     // admin permission stuff
+    mapping(address => bool) private _admins;
     mapping(address => bool) private _minters;
     bool public mintingEnabled = true;
 
     // tokenURI overrides everything
     mapping(uint256 => string) private _tokenURIs;
 
-    constructor(address originalAddress) {
+    constructor(address originalAddress, address royaltyRecipient, uint256 royaltyBps) ERC2981(royaltyRecipient, royaltyBps) {
         originalCollectionAddress = originalAddress;
         _minters[msg.sender] = true;
+        _admins[msg.sender] = true;
     }
 
     function setCanMint(address newMinter) external {
@@ -50,4 +53,10 @@ contract ERC1155 is ERC1155Base {
             _tokenURIs[startId + i] = uris[i];
         }
     }
+
+    function setRoyalties(address recipient, uint256 denominator) external {
+        require(_admins[msg.sender], "ERC721: FORBIDDEN");
+        _setRoyalties(recipient, denominator);
+    }
+
 }

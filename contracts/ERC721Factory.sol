@@ -19,20 +19,27 @@ contract ERC721Factory {
         canDeploy[account] = can;
     }
 
-    function deployERC721(address originalAddress, string memory name, string memory symbol, string memory baseURI, string memory extension) public returns (address) {
+    function deployERC721(address originalAddress,
+                          string memory name,
+                          string memory symbol,
+                          string memory baseURI,
+                          string memory extension,
+                          address royaltyRecipient,
+                          uint256 royaltyBps) public returns (address)
+    {
         require(canDeploy[msg.sender], "ERC721Factory: FORBIDDEN");
         require(bridgedAddressForOriginal[originalAddress] == address(0), "ERC721Factory: ALREADY_BRIDGED");
-        ERC721 newCollection = new ERC721(originalAddress, name, symbol, baseURI, extension);
+        ERC721 newCollection = new ERC721(originalAddress, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
         newCollection.setCanMint(msg.sender);
         address newAddress = address(newCollection);
         bridgedAddressForOriginal[originalAddress] = newAddress;
         return newAddress;
     }
 
-    function deployERC1155(address originalAddress) public returns (address) {
+    function deployERC1155(address originalAddress, address royaltyRecipient, uint256 royaltyBps) public returns (address) {
         require(canDeploy[msg.sender], "ERC721Factory: FORBIDDEN");
         require(bridgedAddressForOriginal[originalAddress] == address(0), "ERC721Factory: ALREADY_BRIDGED");
-        ERC1155 newCollection = new ERC1155(originalAddress);
+        ERC1155 newCollection = new ERC1155(originalAddress, royaltyRecipient, royaltyBps);
         newCollection.setCanMint(msg.sender);
         address newAddress = address(newCollection);
         bridgedAddressForOriginal[originalAddress] = newAddress;

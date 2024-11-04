@@ -3,13 +3,15 @@ pragma solidity ^0.8.4;
 
 import {ERC721Base} from "./ERC721Base.sol";
 import {LibString} from "./utils/LibString.sol";
+import {ERC2981} from "./ERC2981.sol";
 
-contract ERC721 is ERC721Base {
+contract ERC721 is ERC721Base, ERC2981 {
 
     // the address of the original collection on Fantom
     address public originalCollectionAddress;
 
     // address allowed to mint, will likely be just bridge admin address
+    mapping(address => bool) private _admins;
     mapping(address => bool) private _minters;
     bool public mintingEnabled = true;
 
@@ -18,17 +20,25 @@ contract ERC721 is ERC721Base {
     string private _symbol;
     string private _baseURI;
     string private _extension;
+    mapping(uint256 => string) private _tokenURIs;
 
     // custom errors
     error TokenExists();
     error MismatchedLengths();
 
-    constructor(address originalAddress, string memory name, string memory symbol, string memory baseURI, string memory hasExtension) {
+    constructor(address originalAddress,
+                string memory name,
+                string memory symbol,
+                string memory baseURI,
+                string memory hasExtension,
+                address royaltyRecipient,
+                uint256 royaltyBps) ERC2981(royaltyRecipient, royaltyBps) {
         _name = name;
         _symbol = symbol;
         _baseURI = baseURI;
         _extension = hasExtension;
         _minters[msg.sender] = true;
+        _admins[msg.sender] = true;
         originalCollectionAddress = originalAddress;
     }
 
@@ -52,7 +62,16 @@ contract ERC721 is ERC721Base {
 
     function tokenURI(uint256 tokenId) public override view returns (string memory) {
         if (!_exists(tokenId)) revert TokenDoesNotExist();
+        if (bytes(_tokenURIs[tokenId]).length > 0) {
+            return _tokenURIs[tokenId];
+        }
         return string(abi.encodePacked(_baseURI, LibString.toString(tokenId), _extension));
+    }
+
+    function batchSetTokenURIs(uint256 startId, string[] memory uris) public {
+        for (uint256 i = 0; i < uris.length; i++) {
+            _tokenURIs[startId + i] = uris[i];
+        }
     }
 
     function mint(address to, uint256 id) public {
@@ -87,6 +106,23 @@ contract ERC721 is ERC721Base {
         for (uint256 i = 0; i < tos.length; i++) {
             _mint(tos[i], ids[i]);
         }
+    }
+
+    /* ERC165 */
+
+    function supportsInterface(bytes4 interfaceId) public view override returns (bool result) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            let s := shr(224, interfaceId)
+            // ERC165: 0x01ffc9a7, ERC2981: 0x2a55205a, ERC721: 0x80ac58cd
+            result := or(eq(s, 0x01ffc9a7), eq(s, 0x2a55205a))
+            result := or(result, eq(s, 0x80ac58cd))
+        }
+    }
+
+    function setRoyalties(address recipient, uint256 denominator) external {
+        require(_admins[msg.sender], "ERC721: FORBIDDEN");
+        _setRoyalties(recipient, denominator);
     }
 
 }
