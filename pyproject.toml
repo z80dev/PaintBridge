@@ -1,0 +1,28 @@
+[project]
+name = "paintbridge"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ape-alchemy>=0.8.5",
+    "ape-fantom>=0.8.3",
+    "ape-foundry>=0.8.6",
+    "ape-solidity>=0.8.5",
+    "eth-ape>=0.8.22",
+    "flask>=3.1.0",
+    "gunicorn>=23.0.0",
+    "py-solc-x>=2.0.3",
+    "python-dotenv>=1.0.1",
+    "python-telegram-bot>=21.9",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+tg-bot = "app.tg:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
