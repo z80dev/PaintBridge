@@ -5,9 +5,11 @@ import re
 
 flask_env = os.getenv("FLASK_ENV")
 
+
 def chunk(lst, n):
     for i in range(0, len(lst), n):
-        yield lst[i:i + n]
+        yield lst[i : i + n]
+
 
 def target_chain_context(func):
     def wrapper(*args, **kwargs):
@@ -17,13 +19,17 @@ def target_chain_context(func):
         elif flask_env == "testnet":
             with networks.fantom.sonictest.use_provider("node"):
                 return func(*args, **kwargs)
+
     return wrapper
+
 
 def source_chain_context(func):
     def wrapper(*args, **kwargs):
         with networks.fantom.opera.use_provider("alchemy"):
             return func(*args, **kwargs)
+
     return wrapper
+
 
 def parse_url(url: str) -> tuple[str, str, str] | None:
     """
@@ -45,11 +51,11 @@ def parse_url(url: str) -> tuple[str, str, str] | None:
         >>> parse_url("https://foo.com/not-a-number")
         None
     """
-    pattern = r'^(.+/)(\d+)(\.json)?$'
+    pattern = r"^(.+/)(\d+)(\.json)?$"
     match = re.match(pattern, url)
 
     if match:
         base_url, number, extension = match.groups()
-        return (base_url, number, extension or '')
+        return (base_url, number, extension or "")
 
     return None

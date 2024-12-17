@@ -9,14 +9,14 @@ contracts_folder: contracts
 networks:
   custom:
     - name: sonictest
-      chain_id: 64165
+      chain_id: 57054
       ecosystem: fantom
       base_ecosystem_plugin: ethereum
 
 node:
   fantom:
     sonictest:
-      uri: https://rpc.testnet.soniclabs.com
+      uri: https://rpc.blaze.soniclabs.com
 
 default_ecosystem: ethereum
 
@@ -32,3 +32,8 @@ fantom:
 
 solidity:
   evm_version: paris
+
+dependencies:
+  - name: OAppEvm
+    npm: "@layerzerolabs/oapp-evm"
+    version: v0.3.0

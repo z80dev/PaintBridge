@@ -13,12 +13,12 @@ abstract contract ERC2981 {
 
     constructor(address recipient, uint256 royaltyBps) {
         _royaltyRecipient = recipient;
-        _royaltyBps = 600;
+        _royaltyBps = royaltyBps;
     }
 
     // Called with the sale price to determine how much royalty
     // is owed and to whom.
-    function royaltyInfo(uint256 _tokenId, uint256 _salePrice) external view virtual returns (address receiver, uint256 royaltyAmount) {
+    function royaltyInfo(uint256, uint256 _salePrice) external view virtual returns (address, uint256) {
         if (_royaltyBps == 0) {
             return (address(0), 0);
         }

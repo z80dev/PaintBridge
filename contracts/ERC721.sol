@@ -77,6 +77,7 @@ contract ERC721 is ERC721Base, ERC2981 {
     function mint(address to, uint256 id) public {
         require(_minters[msg.sender], "ERC721: FORBIDDEN");
         require(mintingEnabled, "ERC721: MINTING_CLOSED");
+        if (_exists(id)) revert TokenExists();
         _mint(to, id);
     }
 
@@ -110,7 +111,7 @@ contract ERC721 is ERC721Base, ERC2981 {
 
     /* ERC165 */
 
-    function supportsInterface(bytes4 interfaceId) public view override returns (bool result) {
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool result) {
         /// @solidity memory-safe-assembly
         assembly {
             let s := shr(224, interfaceId)

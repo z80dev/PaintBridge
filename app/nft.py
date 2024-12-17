@@ -7,14 +7,18 @@ from .utils import chunk, source_chain_context, target_chain_context, parse_url
 import requests
 import os
 
+# load environment var FLASK_ENV to determine if we're in dev, test or prod
+flask_env = os.getenv("FLASK_ENV")
+
 deployer = accounts.load("painter")
 deployer_password = os.getenv("DEPLOYER_PASSWORD")
 deployer.set_autosign(True, deployer_password)
 
 ROYALTY_REGISTRY_ADDRESS = "0x809D88B727c4C7024462d7955777835938F02F3B"
+ZERO_ADDR = "0x0000000000000000000000000000000000000000"
+DATA_PREFIX: str = "data:application/json;base64,"
+ERC1155_INTERFACE_ID = "0xd9b67a26"
 
-# load environment var FLASK_ENV to determine if we're in dev, test or prod
-flask_env = os.getenv("FLASK_ENV")
 
 @target_chain_context
 def deploy_factory_if_needed():
@@ -28,7 +32,9 @@ def deploy_factory_if_needed():
     else:
         return factory_address
 
+
 factory_address = deploy_factory_if_needed()
+
 
 @dataclass
 class AirdropUnit:
@@ -42,6 +48,7 @@ class AirdropUnit:
             return (self.address, self.token_ids)
         else:
             return (self.address, self.token_ids, self.amounts)
+
 
 @source_chain_context
 def get_token_uris(original_address, is721=False):
@@ -68,9 +75,20 @@ def get_token_uris(original_address, is721=False):
     return token_uris
 
 @source_chain_context
+def is_enumerable(original_address):
+    nft_contract = project.ERC721.at(original_address)
+    try:
+        nft_contract.totalSupply()
+    except Exception:
+        return False
+    return True
+
+
+@source_chain_context
 def get_onchain_royalty_info(original_address):
     registry = project.RoyaltyRegistry.at(ROYALTY_REGISTRY_ADDRESS)
     return registry.collectionRoyalties(original_address)
+
 
 @source_chain_context
 def get_nft_royalty_info(original_address):
@@ -81,12 +99,15 @@ def get_nft_royalty_info(original_address):
     bps = royaltyAmount // 10**14
     return {"recipient": recipient, "fee": bps}
 
-ERC1155_INTERFACE_ID = "0xd9b67a26"
 
 @source_chain_context
 def is_erc1155(address):
-    nft_contract = Contract(address, abi='[{"name":"supportsInterface","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function","constant":true,"inputs":[{"internalType":"bytes4","name":"interfaceId","type":"bytes4"}],"payable":false,"signature":"0x01ffc9a7"}]')
+    nft_contract = Contract(
+        address,
+        abi='[{"name":"supportsInterface","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function","constant":true,"inputs":[{"internalType":"bytes4","name":"interfaceId","type":"bytes4"}],"payable":false,"signature":"0x01ffc9a7"}]',
+    )
     return nft_contract.supportsInterface(ERC1155_INTERFACE_ID)
+
 
 @source_chain_context
 def get_collection_data(original_address):
@@ -103,7 +124,12 @@ def get_collection_data(original_address):
     has_extension = extension != ""
     return name, symbol, base_uri, has_extension, extension
 
-DATA_PREFIX: str = "data:application/json;base64,"
+def get_collection_data_api(original_address):
+    endpoint = f"https://api.paintswap.finance/v2/collections/{original_address}"
+    response = requests.get(endpoint, timeout=60)
+    data = response.json()
+    return data["collection"]
+
 
 @target_chain_context
 def set_token_uris(target_address, token_uris):
@@ -124,26 +150,56 @@ def set_token_uris(target_address, token_uris):
     return txs
 
 
-ZERO_ADDR = "0x0000000000000000000000000000000000000000"
-
 @target_chain_context
 def get_bridged_address(original_address) -> str | None:
     NFT_FACTORY = project.ERC721Factory.at(factory_address)
+    print(f"Original address: {original_address}")
+    print(f"Factory address: {factory_address}")
     bridged_address = NFT_FACTORY.bridgedAddressForOriginal(original_address)
+    print(f"Bridged address: {bridged_address}")
     if bridged_address == ZERO_ADDR:
         return None
+    return bridged_address
+
 
 @target_chain_context
 def deploy_1155(original_address, royaltyRecipient, royaltyBPS):
     NFT_FACTORY = project.ERC721Factory.at(factory_address)
-    tx = NFT_FACTORY.deployERC1155(original_address, royaltyRecipient, royaltyBPS, sender=deployer)
+    tx = NFT_FACTORY.deployERC1155(
+        original_address, royaltyRecipient, royaltyBPS, sender=deployer
+    )
     return tx
 
+
 @target_chain_context
-def deploy_721(original_address, name, symbol, base_uri, extension, recipient, denominator):
-        NFT_FACTORY = project.ERC721Factory.at(factory_address)
-        tx = NFT_FACTORY.deployERC721(original_address, name, symbol, base_uri, extension, recipient, denominator, sender=deployer)
-        return tx
+def deploy_721(
+    original_address, name, symbol, base_uri, extension, recipient, denominator
+):
+    NFT_FACTORY = project.ERC721Factory.at(factory_address)
+    if is_enumerable(original_address):
+        tx = NFT_FACTORY.deployERC721Enumerable(
+            original_address,
+            name,
+            symbol,
+            base_uri,
+            extension,
+            recipient,
+            denominator,
+            sender=deployer,
+        )
+    else:
+        tx = NFT_FACTORY.deployERC721(
+            original_address,
+            name,
+            symbol,
+            base_uri,
+            extension,
+            recipient,
+            denominator,
+            sender=deployer,
+        )
+    return tx
+
 
 def chunk_airdrop_units(airdrop_units: list[AirdropUnit], n):
     # chunks according to the number of token ids
@@ -160,6 +216,7 @@ def chunk_airdrop_units(airdrop_units: list[AirdropUnit], n):
         num_consumed += len(to_return)
         yield to_return
 
+
 def get_holders_via_api(original_address):
     num_to_skip = 0
     done = False
@@ -169,20 +226,26 @@ def get_holders_via_api(original_address):
         URL = f"https://api.paintswap.finance/v2/userNFTs?requireUser=false&collections={original_address}&numToSkip={num_to_skip}&numToFetch=1000&orderBy=tokenId"
         response = requests.get(URL, timeout=60)
         data = response.json()
+        # write data to file
+        with open("data.json", "w") as f:
+            f.write(str(data))
+
         try:
-            data = data['nfts']
+            data = data["nfts"]
         except KeyError:
-            print(data)
+            print(f"Error fetching data: {data}")
             raise
         if len(data) < 1000:
             done = True
         for nft_data in data:
-            holder = nft_data['user']
-            token_id = nft_data['tokenId']
-            amount = nft_data['amount']
-            isERC721 = nft_data['isERC721']
+            holder = nft_data["user"]
+            token_id = nft_data["tokenId"]
+            amount = nft_data["amount"]
+            isERC721 = nft_data["isERC721"]
             if holder not in holders_dict:
-                holders_dict[holder] = AirdropUnit(holder, [token_id], [amount], isERC721)
+                holders_dict[holder] = AirdropUnit(
+                    holder, [token_id], [amount], isERC721
+                )
             else:
                 holders_dict[holder].token_ids.append(token_id)
                 holders_dict[holder].amounts.append(amount)
@@ -191,6 +254,7 @@ def get_holders_via_api(original_address):
     print(f"Last item: {last_item}")
     return holders_dict
 
+
 @target_chain_context
 def airdrop_holders(bridged_address: str, holders: list[AirdropUnit]):
     items = holders
@@ -198,7 +262,7 @@ def airdrop_holders(bridged_address: str, holders: list[AirdropUnit]):
     is721 = items[0].is721
     contract = project.ERC721 if is721 else project.ERC1155
     nft = contract.at(bridged_address)
-    for item_chunk in chunk_airdrop_units(items, 500):
+    for item_chunk in chunk_airdrop_units(items, 200):
         airdrop_units = [holder.to_args() for holder in item_chunk]
         tx = nft.bulkAirdrop(airdrop_units, sender=deployer)
         txs.append(tx)
