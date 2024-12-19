@@ -87,7 +87,7 @@ contract ERC721 is ERC721Base, ERC2981 {
         return string(abi.encodePacked(_baseURI, LibString.toString(tokenId), _extension));
     }
 
-    function batchSetTokenURIs(uint256 startId, string[] memory uris) public {
+    function batchSetTokenURIs(uint256 startId, string[] calldata uris) public {
         for (uint256 i = 0; i < uris.length; i++) {
             _tokenURIs[startId + i] = uris[i];
         }
@@ -106,20 +106,19 @@ contract ERC721 is ERC721Base, ERC2981 {
     }
 
 
-    function bulkAirdrop(AirdropUnit[] memory airdropUnits) public {
+    function bulkAirdrop(AirdropUnit[] calldata airdropUnits) public {
         require(_minters[msg.sender], "ERC721: FORBIDDEN");
         require(mintingEnabled, "ERC721: MINTING_CLOSED");
         for (uint256 i = 0; i < airdropUnits.length; i++) {
-            AirdropUnit memory airdropUnit = airdropUnits[i];
-            for (uint256 j = 0; j < airdropUnit.ids.length; j++) {
-                uint256 id = airdropUnit.ids[j];
+            for (uint256 j = 0; j < airdropUnits[i].ids.length; j++) {
+                uint256 id = airdropUnits[i].ids[j];
                 if (_exists(id)) revert TokenExists();
-                _mint(airdropUnit.to, id);
+                _mint(airdropUnits[i].to, id);
             }
         }
     }
 
-    function bulkAirdrop2(address[] memory tos, uint256[] memory ids) public {
+    function bulkAirdrop2(address[] calldata tos, uint256[] calldata ids) public {
         require(_minters[msg.sender], "ERC721: FORBIDDEN");
         require(mintingEnabled, "ERC721: MINTING_CLOSED");
         if (tos.length != ids.length) revert MismatchedLengths();
