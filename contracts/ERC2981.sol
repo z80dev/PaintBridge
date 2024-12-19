@@ -12,8 +12,7 @@ abstract contract ERC2981 {
     address internal _royaltyRecipient;
 
     constructor(address recipient, uint256 royaltyBps) {
-        _royaltyRecipient = recipient;
-        _royaltyBps = royaltyBps;
+        _setRoyalties(recipient, royaltyBps);
     }
 
     // Called with the sale price to determine how much royalty
@@ -27,6 +26,7 @@ abstract contract ERC2981 {
     }
 
     function _setRoyalties(address recipient, uint256 bps) internal {
+        require(bps <= 10000, "ERC721: INVALID_BPS")
         _royaltyRecipient = recipient;
         _royaltyBps = bps;
         emit RoyaltiesSet(recipient, bps);

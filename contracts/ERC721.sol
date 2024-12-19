@@ -128,7 +128,6 @@ contract ERC721 is ERC721Base, ERC2981 {
 
     function setRoyalties(address recipient, uint256 bps) external {
         require(_admins[msg.sender], "ERC721: FORBIDDEN");
-        require(bps <= 10000, "ERC721: INVALID_BPS")
         _setRoyalties(recipient, bps);
     }
 
