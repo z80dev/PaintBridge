@@ -11,7 +11,7 @@ def deployer(accounts):
 
 @pytest.fixture
 def factory(project, deployer):
-    return project.ERC721Factory.deploy(sender=deployer)
+    return project.NFTFactory.deploy(sender=deployer)
 
 
 def test_factory_deploy(factory):

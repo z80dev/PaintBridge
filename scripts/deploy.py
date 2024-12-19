@@ -25,6 +25,6 @@ def main():
     deployer = accounts.load("painter")
     deployer.set_autosign(True, " ")
     project.provider.set_balance(deployer.address, 100 * 10**18)
-    factory = project.ERC721Factory.deploy(sender=deployer)
+    factory = project.NFTFactory.deploy(sender=deployer)
     print(f"Factory deployed at {factory.address}")
     write_to_json(factory.address)

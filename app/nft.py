@@ -28,7 +28,7 @@ def deploy_factory_if_needed():
     if flask_env == "development":
         project.provider.set_balance(deployer.address, 100 * 10**18)
     if factory_address is None or factory_address == "":
-        NFT_FACTORY = project.ERC721Factory
+        NFT_FACTORY = project.NFTFactory
         factory = NFT_FACTORY.deploy(TARGET_ENDPOINT_ADDRESS, sender=deployer)
         return factory.address
     else:
@@ -160,7 +160,7 @@ def set_token_uris(target_address, token_uris):
 
 @target_chain_context
 def get_bridged_address(original_address) -> str | None:
-    NFT_FACTORY = project.ERC721Factory.at(factory_address)
+    NFT_FACTORY = project.NFTFactory.at(factory_address)
     print(f"Original address: {original_address}")
     print(f"Factory address: {factory_address}")
     bridged_address = NFT_FACTORY.bridgedAddressForOriginal(original_address)
@@ -172,7 +172,7 @@ def get_bridged_address(original_address) -> str | None:
 
 @target_chain_context
 def deploy_1155(original_address, royaltyRecipient, royaltyBPS):
-    NFT_FACTORY = project.ERC721Factory.at(factory_address)
+    NFT_FACTORY = project.NFTFactory.at(factory_address)
     tx = NFT_FACTORY.deployERC1155(
         original_address, royaltyRecipient, royaltyBPS, sender=deployer
     )
@@ -183,7 +183,7 @@ def deploy_1155(original_address, royaltyRecipient, royaltyBPS):
 def deploy_721(
     original_address, name, symbol, base_uri, extension, recipient, denominator
 ):
-    NFT_FACTORY = project.ERC721Factory.at(factory_address)
+    NFT_FACTORY = project.NFTFactory.at(factory_address)
     if is_enumerable(original_address):
         tx = NFT_FACTORY.deployERC721Enumerable(
             original_address,

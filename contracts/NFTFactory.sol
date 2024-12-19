@@ -8,7 +8,7 @@ import {ERC1155} from "./ERC1155.sol";
 import { OAppReceiver, OAppCore, Ownable, Origin, MessagingFee } from "./MyOApp.sol";
 
 
-contract ERC721Factory is OAppReceiver {
+contract NFTFactory is OAppReceiver {
 
     mapping (address => address) public bridgedAddressForOriginal;
     mapping (address => bool) public canDeploy;
@@ -36,8 +36,8 @@ contract ERC721Factory is OAppReceiver {
     ) internal override {
         // check origin.sender and origin.eid
         address sender = address(uint160(uint256(origin.sender)));
-        require(sender == originAuthorizerAddress, "ERC721Factory: INVALID_SENDER");
-        require(origin.srcEid == EXPECTED_EID, "ERC721Factory: INVALID_SOURCE_EID");
+        require(sender == originAuthorizerAddress, "NFTFactory: INVALID_SENDER");
+        require(origin.srcEid == EXPECTED_EID, "NFTFactory: INVALID_SOURCE_EID");
         // decode payload into single address
         address collectionAddress = abi.decode(payload, (address));
         bridgingApproved[collectionAddress] = true;
@@ -50,7 +50,7 @@ contract ERC721Factory is OAppReceiver {
     }
 
     function setCanDeploy(address account, bool can) public {
-        require(canDeploy[msg.sender], "ERC721Factory: FORBIDDEN");
+        require(canDeploy[msg.sender], "NFTFactory: FORBIDDEN");
         canDeploy[account] = can;
     }
 
@@ -62,8 +62,8 @@ contract ERC721Factory is OAppReceiver {
                           address royaltyRecipient,
                           uint256 royaltyBps) public returns (address)
     {
-        require(canDeploy[msg.sender], "ERC721Factory: FORBIDDEN");
-        require(bridgedAddressForOriginal[originalAddress] == address(0), "ERC721Factory: ALREADY_BRIDGED");
+        require(canDeploy[msg.sender], "NFTFactory: FORBIDDEN");
+        require(bridgedAddressForOriginal[originalAddress] == address(0), "NFTFactory: ALREADY_BRIDGED");
         ERC721 newCollection = new ERC721(originalAddress, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
         newCollection.setCanMint(msg.sender);
         address newAddress = address(newCollection);
@@ -79,8 +79,8 @@ contract ERC721Factory is OAppReceiver {
                           address royaltyRecipient,
                           uint256 royaltyBps) public returns (address)
     {
-        require(canDeploy[msg.sender], "ERC721Factory: FORBIDDEN");
-        require(bridgedAddressForOriginal[originalAddress] == address(0), "ERC721Factory: ALREADY_BRIDGED");
+        require(canDeploy[msg.sender], "NFTFactory: FORBIDDEN");
+        require(bridgedAddressForOriginal[originalAddress] == address(0), "NFTFactory: ALREADY_BRIDGED");
         ERC721 newCollection = new ERC721Enumerable(originalAddress, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
         newCollection.setCanMint(msg.sender);
         address newAddress = address(newCollection);
@@ -89,8 +89,8 @@ contract ERC721Factory is OAppReceiver {
     }
 
     function deployERC1155(address originalAddress, address royaltyRecipient, uint256 royaltyBps) public returns (address) {
-        require(canDeploy[msg.sender], "ERC721Factory: FORBIDDEN");
-        require(bridgedAddressForOriginal[originalAddress] == address(0), "ERC721Factory: ALREADY_BRIDGED");
+        require(canDeploy[msg.sender], "NFTFactory: FORBIDDEN");
+        require(bridgedAddressForOriginal[originalAddress] == address(0), "NFTFactory: ALREADY_BRIDGED");
         ERC1155 newCollection = new ERC1155(originalAddress, royaltyRecipient, royaltyBps);
         newCollection.setCanMint(msg.sender);
         address newAddress = address(newCollection);
