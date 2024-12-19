@@ -26,10 +26,10 @@ abstract contract ERC2981 {
         return (_royaltyRecipient, royaltyAmount);
     }
 
-    function _setRoyalties(address recipient, uint256 denominator) internal {
+    function _setRoyalties(address recipient, uint256 bps) internal {
         _royaltyRecipient = recipient;
-        _royaltyBps = denominator;
-        emit RoyaltiesSet(recipient, denominator);
+        _royaltyBps = bps;
+        emit RoyaltiesSet(recipient, bps);
     }
 
     event RoyaltiesSet(address receiver, uint256 bps);

@@ -181,7 +181,7 @@ def deploy_1155(original_address, royaltyRecipient, royaltyBPS):
 
 @target_chain_context
 def deploy_721(
-    original_address, name, symbol, base_uri, extension, recipient, denominator
+    original_address, name, symbol, base_uri, extension, recipient, bps
 ):
     NFT_FACTORY = project.NFTFactory.at(factory_address)
     if is_enumerable(original_address):
@@ -192,7 +192,7 @@ def deploy_721(
             base_uri,
             extension,
             recipient,
-            denominator,
+            bps,
             sender=deployer,
         )
     else:
@@ -203,7 +203,7 @@ def deploy_721(
             base_uri,
             extension,
             recipient,
-            denominator,
+            bps,
             sender=deployer,
         )
     return tx
