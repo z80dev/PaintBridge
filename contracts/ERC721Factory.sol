@@ -5,14 +5,48 @@ pragma solidity >=0.8.7 <0.9.0;
 import {ERC721} from "./ERC721.sol";
 import {ERC721Enumerable} from "./ERC721Enumerable.sol";
 import {ERC1155} from "./ERC1155.sol";
+import { OAppReceiver, OAppCore, Ownable, Origin, MessagingFee } from "./MyOApp.sol";
 
-contract ERC721Factory {
+
+contract ERC721Factory is OAppReceiver {
 
     mapping (address => address) public bridgedAddressForOriginal;
     mapping (address => bool) public canDeploy;
+    mapping(address => bool) public bridgingApproved;
+    uint32 public constant EXPECTED_EID = 30112;
+    address originAuthorizerAddress;
 
-    constructor() {
+    event CollectionOwnerBridgingApproved(address collectionOwner, address collectionAddress, bool approved);
+    event AdminBridgingApproved(address collectionAddress, bool approved);
+
+    constructor(address endpoint) OAppCore(endpoint, msg.sender) Ownable(msg.sender) {
         canDeploy[msg.sender] = true;
+    }
+
+    function setOriginAuthorizer(address _originAuthorizerAddress) public onlyOwner {
+        originAuthorizerAddress = _originAuthorizerAddress;
+    }
+
+    function _lzReceive(
+        Origin calldata origin,
+        bytes32 /*_guid*/,
+        bytes calldata payload,
+        address /*_executor*/,
+        bytes calldata /*_extraData*/
+    ) internal override {
+        // check origin.sender and origin.eid
+        address sender = address(uint160(uint256(origin.sender)));
+        require(sender == originAuthorizerAddress, "ERC721Factory: INVALID_SENDER");
+        require(origin.srcEid == EXPECTED_EID, "ERC721Factory: INVALID_SOURCE_EID");
+        // decode payload into single address
+        address collectionAddress = abi.decode(payload, (address));
+        bridgingApproved[collectionAddress] = true;
+        emit CollectionOwnerBridgingApproved(sender, collectionAddress, true);
+    }
+
+    function adminSetBridgingApproved(address collectionAddress, bool approved) external onlyOwner {
+        bridgingApproved[collectionAddress] = approved;
+        emit AdminBridgingApproved(collectionAddress, approved);
     }
 
     function setCanDeploy(address account, bool can) public {

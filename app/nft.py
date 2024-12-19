@@ -19,6 +19,8 @@ ZERO_ADDR = "0x0000000000000000000000000000000000000000"
 DATA_PREFIX: str = "data:application/json;base64,"
 ERC1155_INTERFACE_ID = "0xd9b67a26"
 
+SOURCE_ENDPOINT_ADDRESS = os.getenv("SOURCE_ENDPOINT_ADDRESS")
+TARGET_ENDPOINT_ADDRESS = os.getenv("TARGET_ENDPOINT_ADDRESS")
 
 @target_chain_context
 def deploy_factory_if_needed():
@@ -27,10 +29,16 @@ def deploy_factory_if_needed():
         project.provider.set_balance(deployer.address, 100 * 10**18)
     if factory_address is None or factory_address == "":
         NFT_FACTORY = project.ERC721Factory
-        factory = NFT_FACTORY.deploy(sender=deployer)
+        factory = NFT_FACTORY.deploy(TARGET_ENDPOINT_ADDRESS, sender=deployer)
         return factory.address
     else:
         return factory_address
+
+@source_chain_context
+def deploy_authorizer_if_needed():
+    authorizer_address = os.getenv("AUTHORIZER_ADDRESS")
+    if authorizer_address is None or authorizer_address == "":
+        AUTHORIZER = project.OriginAuthorizer.deploy(SOURCE_ENDPOINT_ADDRESS, sender=deployer)
 
 
 factory_address = deploy_factory_if_needed()
