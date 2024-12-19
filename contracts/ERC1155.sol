@@ -17,6 +17,11 @@ contract ERC1155 is ERC1155Base, ERC2981 {
     // tokenURI overrides everything
     mapping(uint256 => string) private _tokenURIs;
 
+    event MintRightsGranted(address indexed minter);
+    event MintRightsRevoked(address indexed minter);
+    event AdminRightsGranted(address indexed admin);
+    event AdminRightsRevoked(address indexed admin);
+
     constructor(address originalAddress, address royaltyRecipient, uint256 royaltyBps) ERC2981(royaltyRecipient, royaltyBps) {
         originalCollectionAddress = originalAddress;
         _minters[msg.sender] = true;
@@ -26,16 +31,20 @@ contract ERC1155 is ERC1155Base, ERC2981 {
     function setCanMint(address newMinter) external {
         require(_minters[msg.sender], "ERC1155: FORBIDDEN");
         _minters[newMinter] = true;
+        emit MintRightsGranted(newMinter);
     }
 
     function setAdmin(address newAdmin) external {
         require(_admins[msg.sender], "ERC721: FORBIDDEN");
         _admins[newAdmin] = true;
+        emit AdminRightsGranted(newAdmin);
     }
 
     function renounceRights() external {
         _minters[msg.sender] = false;
         _admins[msg.sender] = false;
+        emit MintRightsRevoked(msg.sender);
+        emit AdminRightsRevoked(msg.sender);
     }
 
     struct AirdropUnit {

@@ -26,6 +26,11 @@ contract ERC721 is ERC721Base, ERC2981 {
     error TokenExists();
     error MismatchedLengths();
 
+    event MintRightsGranted(address indexed minter);
+    event MintRightsRevoked(address indexed minter);
+    event AdminRightsGranted(address indexed admin);
+    event AdminRightsRevoked(address indexed admin);
+
     constructor(address originalAddress,
                 string memory name,
                 string memory symbol,
@@ -45,16 +50,20 @@ contract ERC721 is ERC721Base, ERC2981 {
     function setCanMint(address newMinter) external {
         require(_admins[msg.sender], "ERC721: FORBIDDEN");
         _minters[newMinter] = true;
+        emit MintRightsGranted(newMinter);
     }
 
     function setAdmin(address newAdmin) external {
         require(_admins[msg.sender], "ERC721: FORBIDDEN");
         _admins[newAdmin] = true;
+        emit AdminRightsGranted(newAdmin);
     }
 
     function renounceRights() external {
         _minters[msg.sender] = false;
         _admins[msg.sender] = false;
+        emit MintRightsRevoked(msg.sender);
+        emit AdminRightsRevoked(msg.sender);
     }
 
     function closeMinting() external {
