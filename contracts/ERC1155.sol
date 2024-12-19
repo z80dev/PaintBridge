@@ -28,6 +28,16 @@ contract ERC1155 is ERC1155Base, ERC2981 {
         _minters[newMinter] = true;
     }
 
+    function setAdmin(address newAdmin) external {
+        require(_admins[msg.sender], "ERC721: FORBIDDEN");
+        _admins[newAdmin] = true;
+    }
+
+    function renounceRights() external {
+        _minters[msg.sender] = false;
+        _admins[msg.sender] = false;
+    }
+
     struct AirdropUnit {
         address to;
         uint256[] ids;

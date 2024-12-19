@@ -52,6 +52,11 @@ contract ERC721 is ERC721Base, ERC2981 {
         _admins[newAdmin] = true;
     }
 
+    function renounceRights() external {
+        _minters[msg.sender] = false;
+        _admins[msg.sender] = false;
+    }
+
     function closeMinting() external {
         require(_minters[msg.sender], "ERC721: FORBIDDEN");
         mintingEnabled = false;
