@@ -81,7 +81,7 @@ contract ERC721 is ERC721Base, ERC2981 {
 
     function tokenURI(uint256 tokenId) public override view returns (string memory) {
         if (!_exists(tokenId)) revert TokenDoesNotExist();
-        if (bytes(_tokenURIs[tokenId]).length > 0) {
+        if (bytes(_tokenURIs[tokenId]).length != 0) {
             return _tokenURIs[tokenId];
         }
         return string(abi.encodePacked(_baseURI, LibString.toString(tokenId), _extension));

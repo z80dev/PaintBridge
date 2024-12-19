@@ -60,7 +60,7 @@ contract ERC1155 is ERC1155Base, ERC2981 {
     }
 
     function uri(uint256 id) public view override returns (string memory) {
-        if (bytes(_tokenURIs[id]).length > 0) {
+        if (bytes(_tokenURIs[id]).length != 0) {
             return _tokenURIs[id];
         } else {
             revert("ERC1155: URI not set");
