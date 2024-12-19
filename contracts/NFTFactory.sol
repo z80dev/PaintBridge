@@ -66,6 +66,7 @@ contract NFTFactory is OAppReceiver {
         require(bridgedAddressForOriginal[originalAddress] == address(0), "NFTFactory: ALREADY_BRIDGED");
         ERC721 newCollection = new ERC721(originalAddress, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
         newCollection.setCanMint(msg.sender);
+        newCollection.setAdmin(msg.sender);
         address newAddress = address(newCollection);
         bridgedAddressForOriginal[originalAddress] = newAddress;
         return newAddress;
@@ -83,6 +84,7 @@ contract NFTFactory is OAppReceiver {
         require(bridgedAddressForOriginal[originalAddress] == address(0), "NFTFactory: ALREADY_BRIDGED");
         ERC721 newCollection = new ERC721Enumerable(originalAddress, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
         newCollection.setCanMint(msg.sender);
+        newCollection.setAdmin(msg.sender);
         address newAddress = address(newCollection);
         bridgedAddressForOriginal[originalAddress] = newAddress;
         return newAddress;
@@ -93,6 +95,7 @@ contract NFTFactory is OAppReceiver {
         require(bridgedAddressForOriginal[originalAddress] == address(0), "NFTFactory: ALREADY_BRIDGED");
         ERC1155 newCollection = new ERC1155(originalAddress, royaltyRecipient, royaltyBps);
         newCollection.setCanMint(msg.sender);
+        newCollection.setAdmin(msg.sender);
         address newAddress = address(newCollection);
         bridgedAddressForOriginal[originalAddress] = newAddress;
         return newAddress;
