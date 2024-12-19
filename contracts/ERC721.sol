@@ -88,7 +88,7 @@ contract ERC721 is ERC721Base, ERC2981 {
     }
 
     function batchSetTokenURIs(uint256 startId, string[] calldata uris) public {
-        for (uint256 i = 0; i < uris.length; i++) {
+        for (uint256 i = 0; i < uris.length; ++i) {
             _tokenURIs[startId + i] = uris[i];
         }
     }
@@ -109,7 +109,7 @@ contract ERC721 is ERC721Base, ERC2981 {
     function bulkAirdrop(AirdropUnit[] calldata airdropUnits) public {
         require(_minters[msg.sender], "ERC721: FORBIDDEN");
         require(mintingEnabled, "ERC721: MINTING_CLOSED");
-        for (uint256 i = 0; i < airdropUnits.length; i++) {
+        for (uint256 i = 0; i < airdropUnits.length; ++i) {
             for (uint256 j = 0; j < airdropUnits[i].ids.length; j++) {
                 uint256 id = airdropUnits[i].ids[j];
                 if (_exists(id)) revert TokenExists();
@@ -122,7 +122,7 @@ contract ERC721 is ERC721Base, ERC2981 {
         require(_minters[msg.sender], "ERC721: FORBIDDEN");
         require(mintingEnabled, "ERC721: MINTING_CLOSED");
         if (tos.length != ids.length) revert MismatchedLengths();
-        for (uint256 i = 0; i < tos.length; i++) {
+        for (uint256 i = 0; i < tos.length; ++i) {
             _mint(tos[i], ids[i]);
         }
     }

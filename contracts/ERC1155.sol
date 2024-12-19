@@ -54,7 +54,7 @@ contract ERC1155 is ERC1155Base, ERC2981 {
     }
 
     function bulkAirdrop(AirdropUnit[] calldata airdrops) public {
-        for (uint256 i = 0; i < airdrops.length; i++) {
+        for (uint256 i = 0; i < airdrops.length; ++i) {
             _batchMint(airdrops[i].to, airdrops[i].ids, airdrops[i].amounts, "");
         }
     }
@@ -68,7 +68,7 @@ contract ERC1155 is ERC1155Base, ERC2981 {
     }
 
     function batchSetTokenURIs(uint256 startId, string[] calldata uris) public {
-        for (uint256 i = 0; i < uris.length; i++) {
+        for (uint256 i = 0; i < uris.length; ++i) {
             _tokenURIs[startId + i] = uris[i];
         }
     }
