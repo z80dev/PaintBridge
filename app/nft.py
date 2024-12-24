@@ -34,14 +34,30 @@ def deploy_factory_if_needed():
     else:
         return factory_address
 
+@target_chain_context
+def deploy_bridge_control_if_needed():
+    bridge_control_address = os.getenv("BRIDGE_CONTROL_ADDRESS")
+    factory_address = deploy_factory_if_needed()
+    if bridge_control_address is None or bridge_control_address == "":
+        BRIDGE_CONTROL = project.NFTBridgeControl.deploy(
+            TARGET_ENDPOINT_ADDRESS, factory_address, sender=deployer
+        )
+        return BRIDGE_CONTROL.address
+    else:
+        return bridge_control_address
+
 @source_chain_context
 def deploy_authorizer_if_needed():
     authorizer_address = os.getenv("AUTHORIZER_ADDRESS")
     if authorizer_address is None or authorizer_address == "":
         AUTHORIZER = project.OriginAuthorizer.deploy(SOURCE_ENDPOINT_ADDRESS, sender=deployer)
+        return AUTHORIZER.address
+    else:
+        return authorizer_address
 
 
 factory_address = deploy_factory_if_needed()
+bridge_control_address = deploy_bridge_control_if_needed()
 
 
 @dataclass
@@ -160,10 +176,10 @@ def set_token_uris(target_address, token_uris):
 
 @target_chain_context
 def get_bridged_address(original_address) -> str | None:
-    NFT_FACTORY = project.NFTFactory.at(factory_address)
+    BRIDGE_CONTROL = project.NFTBridgeControl.at(bridge_control_address)
     print(f"Original address: {original_address}")
     print(f"Factory address: {factory_address}")
-    bridged_address = NFT_FACTORY.bridgedAddressForOriginal(original_address)
+    bridged_address = BRIDGE_CONTROL.bridgedAddressForOriginal(original_address)
     print(f"Bridged address: {bridged_address}")
     if bridged_address == ZERO_ADDR:
         return None
@@ -172,8 +188,8 @@ def get_bridged_address(original_address) -> str | None:
 
 @target_chain_context
 def deploy_1155(original_address, original_owner, royaltyRecipient, royaltyBPS):
-    NFT_FACTORY = project.NFTFactory.at(factory_address)
-    tx = NFT_FACTORY.deployERC1155(
+    BRIDGE_CONTROL = project.NFTBridgeControl.at(bridge_control_address)
+    tx = BRIDGE_CONTROL.deployERC1155(
         original_address, original_owner, royaltyRecipient, royaltyBPS, sender=deployer
     )
     return tx
@@ -183,31 +199,20 @@ def deploy_1155(original_address, original_owner, royaltyRecipient, royaltyBPS):
 def deploy_721(
         original_address, original_owner, name, symbol, base_uri, extension, recipient, bps
 ):
-    NFT_FACTORY = project.NFTFactory.at(factory_address)
-    if is_enumerable(original_address):
-        tx = NFT_FACTORY.deployERC721Enumerable(
-            original_address,
-            original_owner,
-            name,
-            symbol,
-            base_uri,
-            extension,
-            recipient,
-            bps,
-            sender=deployer,
-        )
-    else:
-        tx = NFT_FACTORY.deployERC721(
-            original_address,
-            original_owner,
-            name,
-            symbol,
-            base_uri,
-            extension,
-            recipient,
-            bps,
-            sender=deployer,
-        )
+    BRIDGE_CONTROL = project.NFTBridgeControl.at(bridge_control_address)
+    enumerable = is_enumerable(original_address)
+    tx = BRIDGE_CONTROL.deployERC721Enumerable(
+        original_address,
+        original_owner,
+        name,
+        symbol,
+        base_uri,
+        extension,
+        recipient,
+        bps,
+        enumerable,
+        sender=deployer,
+    )
     return tx
 
 
