@@ -29,7 +29,7 @@ def deploy_factory_if_needed():
         project.provider.set_balance(deployer.address, 100 * 10**18)
     if factory_address is None or factory_address == "":
         NFT_FACTORY = project.NFTFactory
-        factory = NFT_FACTORY.deploy(TARGET_ENDPOINT_ADDRESS, sender=deployer)
+        factory = NFT_FACTORY.deploy(sender=deployer)
         return factory.address
     else:
         return factory_address
