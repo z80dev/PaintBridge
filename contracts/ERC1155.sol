@@ -5,7 +5,7 @@ import {ERC1155Base} from "./ERC1155Base.sol";
 import {ERC2981} from "./ERC2981.sol";
 import {LibString} from "./utils/LibString.sol";
 
-contract ERC1155 is ERC1155Base, ERC2981 {
+contract ERC1155 is ERC1155Base, ERC2981, Ownable {
 
     address public originalCollectionAddress;
 
@@ -22,7 +22,7 @@ contract ERC1155 is ERC1155Base, ERC2981 {
     event AdminRightsGranted(address indexed admin);
     event AdminRightsRevoked(address indexed admin);
 
-    constructor(address originalAddress, address royaltyRecipient, uint256 royaltyBps) ERC2981(royaltyRecipient, royaltyBps) {
+    constructor(address originalAddress, address royaltyRecipient, uint256 royaltyBps) ERC2981(royaltyRecipient, royaltyBps) Ownable(msg.sender) {
         originalCollectionAddress = originalAddress;
         _minters[msg.sender] = true;
         _admins[msg.sender] = true;

@@ -5,6 +5,7 @@ pragma solidity >=0.8.7 <0.9.0;
 import {ERC721} from "./ERC721.sol";
 import {ERC721Enumerable} from "./ERC721Enumerable.sol";
 import {ERC1155} from "./ERC1155.sol";
+import {Ownable} from "./Ownable.sol";
 
 contract NFTFactory {
 
@@ -20,6 +21,7 @@ contract NFTFactory {
         ERC721 newCollection = new ERC721(originalAddress, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
         newCollection.setAdmin(msg.sender);
         newCollection.renounceRights();
+        Ownable(newCollection).transferOwnership(msg.sender);
         address newAddress = address(newCollection);
         return newAddress;
     }
@@ -36,6 +38,7 @@ contract NFTFactory {
         ERC721 newCollection = new ERC721Enumerable(originalAddress, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
         newCollection.setAdmin(msg.sender);
         newCollection.renounceRights();
+        Ownable(newCollection).transferOwnership(msg.sender);
         address newAddress = address(newCollection);
         return newAddress;
     }
@@ -48,6 +51,7 @@ contract NFTFactory {
         ERC1155 newCollection = new ERC1155(originalAddress, royaltyRecipient, royaltyBps);
         newCollection.setAdmin(msg.sender);
         newCollection.renounceRights();
+        Ownable(newCollection).transferOwnership(msg.sender);
         address newAddress = address(newCollection);
         return newAddress;
     }

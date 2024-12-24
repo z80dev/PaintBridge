@@ -4,8 +4,9 @@ pragma solidity ^0.8.4;
 import {ERC721Base} from "./ERC721Base.sol";
 import {LibString} from "./utils/LibString.sol";
 import {ERC2981} from "./ERC2981.sol";
+import {Ownable} from "./Ownable.sol";
 
-contract ERC721 is ERC721Base, ERC2981 {
+contract ERC721 is ERC721Base, ERC2981, Ownable {
 
     // the address of the original collection on Fantom
     address public originalCollectionAddress;
@@ -37,7 +38,7 @@ contract ERC721 is ERC721Base, ERC2981 {
                 string memory baseURI,
                 string memory hasExtension,
                 address royaltyRecipient,
-                uint256 royaltyBps) ERC2981(royaltyRecipient, royaltyBps) {
+                uint256 royaltyBps) ERC2981(royaltyRecipient, royaltyBps) Ownable(msg.sender) {
         _name = name;
         _symbol = symbol;
         _baseURI = baseURI;
