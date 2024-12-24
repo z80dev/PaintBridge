@@ -4,6 +4,7 @@ pragma solidity ^0.8.4;
 import {ERC1155Base} from "./ERC1155Base.sol";
 import {ERC2981} from "./ERC2981.sol";
 import {LibString} from "./utils/LibString.sol";
+import {Ownable} from "./Ownable.sol";
 
 contract ERC1155 is ERC1155Base, ERC2981, Ownable {
 
