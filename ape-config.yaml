@@ -31,7 +31,8 @@ fantom:
     default_provider: node
 
 solidity:
-  evm_version: paris
+  evm_version: cancun
+  via_ir: True
 
 dependencies:
   - name: OAppEvm
