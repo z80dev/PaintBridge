@@ -38,6 +38,7 @@ interface IManagedNFT {
 contract NFTBridgeControl is OAppReceiver {
 
     mapping (address => address) public bridgedAddressForOriginal;
+    mapping (address => address) public originalOwnerForCollection;
     mapping (address => bool) public canDeploy;
     mapping(address => bool) public bridgingApproved;
     uint32 public constant EXPECTED_EID = 30112;
@@ -104,6 +105,12 @@ contract NFTBridgeControl is OAppReceiver {
         return bridgedAddressForOriginal[originalAddress] != address(0);
     }
 
+    function claimOwnership(address collectionAddress) public {
+        if (originalOwnerForCollection[collectionAddress] != msg.sender) {
+            revert InvalidCollectionOwner();
+        }
+        Ownable(collectionAddress).transferOwnership(msg.sender);
+    }
 
     function deployERC721(address originalAddress,
                           address originalOwner,
@@ -129,6 +136,7 @@ contract NFTBridgeControl is OAppReceiver {
         IManagedNFT(newCollection).setCanMint(msg.sender);
         IManagedNFT(newCollection).setAdmin(msg.sender);
         bridgedAddressForOriginal[originalAddress] = newCollection;
+        originalOwnerForCollection[newCollection] = originalOwner;
         return newCollection;
     }
 
@@ -147,6 +155,7 @@ contract NFTBridgeControl is OAppReceiver {
         IManagedNFT(newCollection).setCanMint(msg.sender);
         IManagedNFT(newCollection).setAdmin(msg.sender);
         bridgedAddressForOriginal[originalAddress] = newCollection;
+        originalOwnerForCollection[newCollection] = originalOwner;
         return newCollection;
     }
 
