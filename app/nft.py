@@ -171,22 +171,23 @@ def get_bridged_address(original_address) -> str | None:
 
 
 @target_chain_context
-def deploy_1155(original_address, royaltyRecipient, royaltyBPS):
+def deploy_1155(original_address, original_owner, royaltyRecipient, royaltyBPS):
     NFT_FACTORY = project.NFTFactory.at(factory_address)
     tx = NFT_FACTORY.deployERC1155(
-        original_address, royaltyRecipient, royaltyBPS, sender=deployer
+        original_address, original_owner, royaltyRecipient, royaltyBPS, sender=deployer
     )
     return tx
 
 
 @target_chain_context
 def deploy_721(
-    original_address, name, symbol, base_uri, extension, recipient, bps
+        original_address, original_owner, name, symbol, base_uri, extension, recipient, bps
 ):
     NFT_FACTORY = project.NFTFactory.at(factory_address)
     if is_enumerable(original_address):
         tx = NFT_FACTORY.deployERC721Enumerable(
             original_address,
+            original_owner,
             name,
             symbol,
             base_uri,
@@ -198,6 +199,7 @@ def deploy_721(
     else:
         tx = NFT_FACTORY.deployERC721(
             original_address,
+            original_owner,
             name,
             symbol,
             base_uri,

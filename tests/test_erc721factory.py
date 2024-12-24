@@ -8,10 +8,17 @@ import pytest
 def deployer(accounts):
     return accounts[0]
 
+@pytest.fixture
+def mock_endpoint(project, deployer):
+    return project.MockEndpoint.deploy(sender=deployer)
 
 @pytest.fixture
 def factory(project, deployer):
     return project.NFTFactory.deploy(sender=deployer)
+
+@pytest.fixture
+def bridge_control(project, deployer, mock_endpoint, factory):
+    return project.NFTBridgeControl.deploy(mock_endpoint, factory, sender=deployer)
 
 
 def test_factory_deploy(factory):
@@ -19,20 +26,23 @@ def test_factory_deploy(factory):
     assert factory.address is not None
 
 
-def test_deploy_collection_through_factory(factory, deployer, project):
+def test_deploy_collection_through_factory(bridge_control, deployer, project):
     original_address = Address(1001)
-    factory.deployERC721(
+    original_owner = deployer
+    bridge_control.deployERC721(
         original_address,
+        original_owner,
         "MyNFT",
         "MNFT",
         "http://localhost:8081/",
         ".json",
         deployer,
         0,
+        False,
         sender=deployer,
     ).return_value
-    assert factory.didBridge(original_address)
-    new_nft_addr = factory.bridgedAddressForOriginal(original_address)
+    assert bridge_control.didBridge(original_address)
+    new_nft_addr = bridge_control.bridgedAddressForOriginal(original_address)
     new_nft = project.ERC721.at(new_nft_addr)
     assert project.ERC721.at(new_nft_addr).name() == "MyNFT"
     assert project.ERC721.at(new_nft_addr).symbol() == "MNFT"
@@ -54,20 +64,23 @@ def bps_to_scaled_denominator(bps, scaling_factor):
     return (scaling_factor * 10000) // bps
 
 
-def test_royalties(factory, deployer, project):
+def test_royalties(bridge_control, deployer, project):
     original_address = Address(1001)
-    factory.deployERC721(
+    original_owner = deployer
+    bridge_control.deployERC721(
         original_address,
+        original_owner,
         "MyNFT",
         "MNFT",
         "http://localhost:8081/",
         ".json",
         deployer,
         600,
+        False,
         sender=deployer,
     ).return_value
-    assert factory.didBridge(original_address)
-    new_nft_addr = factory.bridgedAddressForOriginal(original_address)
+    assert bridge_control.didBridge(original_address)
+    new_nft_addr = bridge_control.bridgedAddressForOriginal(original_address)
     new_nft = project.ERC721.at(new_nft_addr)
     ONE_ETH = 10**18
     royalty_info = new_nft.royaltyInfo(1, ONE_ETH)
@@ -78,20 +91,23 @@ def test_royalties(factory, deployer, project):
     assert project.ERC721.at(new_nft_addr).tokenURI(1) == "http://localhost:8081/1.json"
 
 
-def test_deploy_enumerable_collection_through_factory(factory, deployer, project):
+def test_deploy_enumerable_collection_through_factory(bridge_control, deployer, project):
     original_address = Address(1001)
-    factory.deployERC721Enumerable(
+    original_owner = deployer
+    bridge_control.deployERC721(
         original_address,
+        original_owner,
         "MyNFT",
         "MNFT",
         "http://localhost:8081/",
         ".json",
         deployer,
         0,
+        True,
         sender=deployer,
     ).return_value
-    assert factory.didBridge(original_address)
-    new_nft_addr = factory.bridgedAddressForOriginal(original_address)
+    assert bridge_control.didBridge(original_address)
+    new_nft_addr = bridge_control.bridgedAddressForOriginal(original_address)
     new_nft = project.ERC721.at(new_nft_addr)
     assert project.ERC721.at(new_nft_addr).name() == "MyNFT"
     assert project.ERC721.at(new_nft_addr).symbol() == "MNFT"
