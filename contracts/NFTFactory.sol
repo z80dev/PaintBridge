@@ -19,6 +19,7 @@ contract NFTFactory {
     {
         ERC721 newCollection = new ERC721(originalAddress, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
         newCollection.setAdmin(msg.sender);
+        newCollection.renounceRights();
         address newAddress = address(newCollection);
         return newAddress;
     }
@@ -34,6 +35,7 @@ contract NFTFactory {
     {
         ERC721 newCollection = new ERC721Enumerable(originalAddress, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
         newCollection.setAdmin(msg.sender);
+        newCollection.renounceRights();
         address newAddress = address(newCollection);
         return newAddress;
     }
@@ -45,6 +47,7 @@ contract NFTFactory {
     {
         ERC1155 newCollection = new ERC1155(originalAddress, royaltyRecipient, royaltyBps);
         newCollection.setAdmin(msg.sender);
+        newCollection.renounceRights();
         address newAddress = address(newCollection);
         return newAddress;
     }
