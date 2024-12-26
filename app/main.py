@@ -10,6 +10,7 @@ from .nft import (
     get_collection_data,
     deploy_721,
     get_collection_data_api,
+    get_collection_owner,
     get_holders_via_api,
     get_nft_royalty_info,
     get_onchain_royalty_info,
@@ -86,13 +87,14 @@ def bridge(param):
                 }
             )
 
+    original_owner = get_collection_owner(original_address)
     if is721:
         name, symbol, base_uri, _, extension = get_collection_data(original_address)
         deployment_tx = deploy_721(
-            original_address, name, symbol, base_uri, extension, recipient, fee
+            original_address, original_owner, name, symbol, base_uri, extension, recipient, fee
         )
     else:
-        deployment_tx = deploy_1155(original_address, recipient, fee)
+        deployment_tx = deploy_1155(original_address, original_owner, recipient, fee)
 
     bridged_address = get_bridged_address(original_address)
     if not bridged_address:

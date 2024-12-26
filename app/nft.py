@@ -56,7 +56,6 @@ def deploy_authorizer_if_needed():
         return authorizer_address
 
 
-factory_address = deploy_factory_if_needed()
 bridge_control_address = deploy_bridge_control_if_needed()
 
 
@@ -178,7 +177,7 @@ def set_token_uris(target_address, token_uris):
 def get_bridged_address(original_address) -> str | None:
     BRIDGE_CONTROL = project.NFTBridgeControl.at(bridge_control_address)
     print(f"Original address: {original_address}")
-    print(f"Factory address: {factory_address}")
+    print(f"Bridge control address: {bridge_control_address}")
     bridged_address = BRIDGE_CONTROL.bridgedAddressForOriginal(original_address)
     print(f"Bridged address: {bridged_address}")
     if bridged_address == ZERO_ADDR:
@@ -195,13 +194,22 @@ def deploy_1155(original_address, original_owner, royaltyRecipient, royaltyBPS):
     return tx
 
 
+@source_chain_context
+def get_collection_owner(original_address):
+    nft_contract = project.ERC721.at(original_address)
+    try:
+        owner = nft_contract.owner()
+        return owner
+    except Exception:
+        return ZERO_ADDR
+
 @target_chain_context
 def deploy_721(
         original_address, original_owner, name, symbol, base_uri, extension, recipient, bps
 ):
     BRIDGE_CONTROL = project.NFTBridgeControl.at(bridge_control_address)
     enumerable = is_enumerable(original_address)
-    tx = BRIDGE_CONTROL.deployERC721Enumerable(
+    tx = BRIDGE_CONTROL.deployERC721(
         original_address,
         original_owner,
         name,
@@ -277,8 +285,11 @@ def airdrop_holders(bridged_address: str, holders: list[AirdropUnit]):
     is721 = items[0].is721
     contract = project.ERC721 if is721 else project.ERC1155
     nft = contract.at(bridged_address)
+    chunk_count = 0
     for item_chunk in chunk_airdrop_units(items, 200):
         airdrop_units = [holder.to_args() for holder in item_chunk]
         tx = nft.bulkAirdrop(airdrop_units, sender=deployer)
+        print(f"TX: {tx} for chunk {chunk_count}")
+        chunk_count += 1
         txs.append(tx)
     return txs

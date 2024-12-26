@@ -5,14 +5,17 @@ dotenv.load_dotenv()
 import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
+from ape.logging import logger as ape_logger, LogLevel
 
-from .nft import airdrop_holders, deploy_1155, deploy_721, get_bridged_address, get_collection_data, get_collection_data_api, get_holders_via_api, get_nft_royalty_info, get_onchain_royalty_info, get_token_uris, set_token_uris
+from .nft import airdrop_holders, deploy_1155, deploy_721, get_bridged_address, get_collection_data, get_collection_data_api, get_collection_owner, get_holders_via_api, get_nft_royalty_info, get_onchain_royalty_info, get_token_uris, set_token_uris
 
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+
+ape_logger.set_level(LogLevel.ERROR)
 
 BOT_TOKEN = os.getenv('TG_BOT_TOKEN')
 
@@ -77,19 +80,20 @@ async def bridge(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = f"*Royalty Info*\nRecipient: {recipient}\nFee: {fee}\n"
     await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
 
+    original_owner = get_collection_owner(original_address)
     if is721:
         name, symbol, base_uri, _, extension = get_collection_data(original_address)
-        msg = f"*Collection Info*\nName: {name}\nSymbol: {symbol}\nBase URI: {base_uri}\nExtension: {extension}\n"
+        msg = f"*Collection Info*\nName: {name}\nSymbol: {symbol}\nBase URI: {base_uri}\nExtension: {extension}\nOwner: {original_owner}\n"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
         msg = f"Deploying 721 contract\n"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
         deployment_tx = deploy_721(
-            original_address, name, symbol, base_uri, extension, recipient, fee
+            original_address, original_owner, name, symbol, base_uri, extension, recipient, fee
         )
         msg = f"Deployment tx: {tx_hash_to_link(deployment_tx.txn_hash)}\n"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
     else:
-        deployment_tx = deploy_1155(original_address, recipient, fee)
+        deployment_tx = deploy_1155(original_address, original_owner, recipient, fee)
 
     bridged_address = get_bridged_address(original_address)
 
