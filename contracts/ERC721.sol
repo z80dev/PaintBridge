@@ -48,23 +48,14 @@ contract ERC721 is ERC721Base, ERC2981, Ownable {
         originalCollectionAddress = originalAddress;
     }
 
-    function setCanMint(address newMinter) external {
-        require(_admins[msg.sender], "ERC721: FORBIDDEN");
+    function setCanMint(address newMinter) external onlyOwner {
         _minters[newMinter] = true;
         emit MintRightsGranted(newMinter);
     }
 
-    function setAdmin(address newAdmin) external {
-        require(_admins[msg.sender], "ERC721: FORBIDDEN");
-        _admins[newAdmin] = true;
-        emit AdminRightsGranted(newAdmin);
-    }
-
-    function renounceRights() external {
+    function renounceMintingRights() external {
         _minters[msg.sender] = false;
-        _admins[msg.sender] = false;
         emit MintRightsRevoked(msg.sender);
-        emit AdminRightsRevoked(msg.sender);
     }
 
     function closeMinting() external {
@@ -87,6 +78,9 @@ contract ERC721 is ERC721Base, ERC2981, Ownable {
         }
         return string(abi.encodePacked(_baseURI, LibString.toString(tokenId), _extension));
     }
+     function setBaseURI(string memory baseURI) external onlyOwner {
+        _baseURI = baseURI;
+    }
 
     function batchSetTokenURIs(uint256 startId, string[] calldata uris) public {
         for (uint256 i = 0; i < uris.length; ++i) {
@@ -95,7 +89,7 @@ contract ERC721 is ERC721Base, ERC2981, Ownable {
     }
 
     function mint(address to, uint256 id) public {
-        require(_minters[msg.sender], "ERC721: FORBIDDEN");
+        require(_minters[msg.sender] || msg.sender == owner(), "ERC721: FORBIDDEN");
         require(mintingEnabled, "ERC721: MINTING_CLOSED");
         if (_exists(id)) revert TokenExists();
         _mint(to, id);
@@ -108,7 +102,7 @@ contract ERC721 is ERC721Base, ERC2981, Ownable {
 
 
     function bulkAirdrop(AirdropUnit[] calldata airdropUnits) public {
-        require(_minters[msg.sender], "ERC721: FORBIDDEN");
+        require(_minters[msg.sender] || msg.sender == owner(), "ERC721: FORBIDDEN");
         require(mintingEnabled, "ERC721: MINTING_CLOSED");
         for (uint256 i = 0; i < airdropUnits.length; ++i) {
             for (uint256 j = 0; j < airdropUnits[i].ids.length; j++) {
@@ -120,7 +114,7 @@ contract ERC721 is ERC721Base, ERC2981, Ownable {
     }
 
     function bulkAirdrop2(address[] calldata tos, uint256[] calldata ids) public {
-        require(_minters[msg.sender], "ERC721: FORBIDDEN");
+        require(_minters[msg.sender] || msg.sender == owner(), "ERC721: FORBIDDEN");
         require(mintingEnabled, "ERC721: MINTING_CLOSED");
         if (tos.length != ids.length) revert MismatchedLengths();
         for (uint256 i = 0; i < tos.length; ++i) {
@@ -140,8 +134,7 @@ contract ERC721 is ERC721Base, ERC2981, Ownable {
         }
     }
 
-    function setRoyalties(address recipient, uint256 bps) external {
-        require(_admins[msg.sender], "ERC721: FORBIDDEN");
+    function setRoyalties(address recipient, uint256 bps) external onlyOwner {
         _setRoyalties(recipient, bps);
     }
 

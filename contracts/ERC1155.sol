@@ -35,17 +35,9 @@ contract ERC1155 is ERC1155Base, ERC2981, Ownable {
         emit MintRightsGranted(newMinter);
     }
 
-    function setAdmin(address newAdmin) external {
-        require(_admins[msg.sender], "ERC721: FORBIDDEN");
-        _admins[newAdmin] = true;
-        emit AdminRightsGranted(newAdmin);
-    }
-
-    function renounceRights() external {
+    function renounceMintingRights() external {
         _minters[msg.sender] = false;
-        _admins[msg.sender] = false;
         emit MintRightsRevoked(msg.sender);
-        emit AdminRightsRevoked(msg.sender);
     }
 
     struct AirdropUnit {
@@ -74,8 +66,7 @@ contract ERC1155 is ERC1155Base, ERC2981, Ownable {
         }
     }
 
-    function setRoyalties(address recipient, uint256 bps) external {
-        require(_admins[msg.sender], "ERC721: FORBIDDEN");
+    function setRoyalties(address recipient, uint256 bps) external onlyOwner {
         _setRoyalties(recipient, bps);
     }
 

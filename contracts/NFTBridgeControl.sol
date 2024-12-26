@@ -105,7 +105,6 @@ contract NFTBridgeControl is OAppReceiver {
             newCollection = nftFactory.deployERC721(originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
         }
         IManagedNFT(newCollection).setCanMint(msg.sender);
-        IManagedNFT(newCollection).setAdmin(msg.sender);
         bridgedAddressForOriginal[originalAddress] = newCollection;
         originalOwnerForCollection[newCollection] = originalOwner;
         return newCollection;
@@ -124,7 +123,6 @@ contract NFTBridgeControl is OAppReceiver {
         }
         address newCollection = nftFactory.deployERC1155(originalAddress, originalOwner, royaltyRecipient, royaltyBps, uri);
         IManagedNFT(newCollection).setCanMint(msg.sender);
-        IManagedNFT(newCollection).setAdmin(msg.sender);
         bridgedAddressForOriginal[originalAddress] = newCollection;
         originalOwnerForCollection[newCollection] = originalOwner;
         return newCollection;
