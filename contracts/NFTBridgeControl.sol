@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.7 <0.9.0;
 
-import { OAppReceiver, OAppCore, Ownable, Origin, MessagingFee } from "./MyOApp.sol";
+import { OAppReceiver, OAppCore, Ownable, Origin, MessagingFee, ILayerZeroEndpointV2 } from "./MyOApp.sol";
 import { INFTFactory } from "./interfaces/INFTFactory.sol";
 import { IManagedNFT } from "./interfaces/IManagedNFT.sol";
 
@@ -12,7 +12,7 @@ contract NFTBridgeControl is OAppReceiver {
     mapping (address => address) public originalOwnerForCollection;
     mapping (address => bool) public canDeploy;
     mapping(address => bool) public bridgingApproved;
-    uint32 public constant EXPECTED_EID = 30112;
+    uint32 public constant EXPECTED_EID = 40349; // Sonic Testnet (round-tripping msgs on same chain during testing)
     address originAuthorizerAddress;
     INFTFactory public nftFactory;
 
@@ -32,10 +32,12 @@ contract NFTBridgeControl is OAppReceiver {
     constructor(address endpoint, address factory) OAppCore(endpoint, msg.sender) Ownable(msg.sender) {
         canDeploy[msg.sender] = true;
         nftFactory = INFTFactory(factory);
+        ILayerZeroEndpointV2(endpoint).setDelegate(msg.sender);
     }
 
     function setOriginAuthorizer(address _originAuthorizerAddress) public onlyOwner {
         originAuthorizerAddress = _originAuthorizerAddress;
+        setPeer(EXPECTED_EID, bytes32(uint256(uint160(_originAuthorizerAddress))));
     }
 
     function _lzReceive(
@@ -100,9 +102,9 @@ contract NFTBridgeControl is OAppReceiver {
         }
         address newCollection;
         if (isEnumerable) {
-            newCollection = nftFactory.deployERC721Enumerable(originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
+            newCollection = nftFactory.deployERC721Enumerable(originalAddress, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
         } else {
-            newCollection = nftFactory.deployERC721(originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
+            newCollection = nftFactory.deployERC721(originalAddress, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
         }
         IManagedNFT(newCollection).setCanMint(msg.sender);
         bridgedAddressForOriginal[originalAddress] = newCollection;
@@ -121,11 +123,14 @@ contract NFTBridgeControl is OAppReceiver {
         if (bridgedAddressForOriginal[originalAddress] != address(0)) {
             revert AlreadyBridged();
         }
-        address newCollection = nftFactory.deployERC1155(originalAddress, originalOwner, royaltyRecipient, royaltyBps, uri);
+        address newCollection = nftFactory.deployERC1155(originalAddress, royaltyRecipient, royaltyBps, uri);
         IManagedNFT(newCollection).setCanMint(msg.sender);
         bridgedAddressForOriginal[originalAddress] = newCollection;
         originalOwnerForCollection[newCollection] = originalOwner;
         return newCollection;
+    }
+
+    fallback() external payable {
     }
 
 }

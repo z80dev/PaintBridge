@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import time
+import dotenv
+dotenv.load_dotenv()
 from flask import Flask, jsonify
 
 from .nft import (
@@ -127,5 +129,3 @@ def getBridgedAddress(param):
     bridged_address = get_bridged_address(param)
     return jsonify({"bridged_address": bridged_address})
 
-
-0x62d0a1c7407ca808b61ef453fa7b0bc9dd1cfb7356460fdfe2c4ddcd51d8ccf0

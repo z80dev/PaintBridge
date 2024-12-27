@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "ape-alchemy>=0.8.5",
+    "ape-base>=0.8.1",
     "ape-fantom>=0.8.3",
     "ape-foundry>=0.8.6",
     "ape-solidity>=0.8.5",
@@ -23,6 +24,7 @@ build-backend = "hatchling.build"
 
 [project.scripts]
 tg-bot = "app.tg:main"
+lz = "app.lz:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]

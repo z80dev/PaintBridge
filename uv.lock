@@ -116,6 +116,20 @@ wheels = [
 ]
 
 [[package]]
+name = "ape-base"
+version = "0.8.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ape-optimism" },
+    { name = "eth-ape" },
+    { name = "ethpm-types" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/26/64/4b3e35c494e7e7c3c1516e4cf98d2f8d5e2791881bbe2a8ce3d3ee0b2ace/ape-base-0.8.1.tar.gz", hash = "sha256:cbcc505743c62b097348c1e0a24e12e55d3a829a4a691e3c925a19f980a72465", size = 17711 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/52/5a/2132104828bd2761951322de2de56ae4ba7ad54fd92f76d82c0d0f837e1a/ape_base-0.8.1-py3-none-any.whl", hash = "sha256:9c3cc4a9644949f860581cf62dcf0100e30c5943089e857daf46f40d64023a23", size = 9395 },
+]
+
+[[package]]
 name = "ape-fantom"
 version = "0.8.3"
 source = { registry = "https://pypi.org/simple" }
@@ -144,6 +158,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f7/c0/9e1ece2c66ac7359e65198c8283bee572f2df42d617052c6f297adcb68c8/ape-foundry-0.8.6.tar.gz", hash = "sha256:3f7470a60c31000cfaa5b3ec5ed2f7776c720e8bd980e540b10b0f17e2e3d1fb", size = 102585 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4d/78/a2a692cb571564f9fd22d092a965a194e3aaaa5c9b95f5522070d90f8a65/ape_foundry-0.8.6-py3-none-any.whl", hash = "sha256:4e8876d356fb03e4b558e4db8acfad6f066f2a73dbb0d8ced4fba5bcb1e87aab", size = 18056 },
+]
+
+[[package]]
+name = "ape-optimism"
+version = "0.8.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "eth-ape" },
+    { name = "ethpm-types" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/31/fc/0b4b415ecbdb0352578b8ea8085e09d5a49140c2fbb2672469b7da624ca8/ape-optimism-0.8.2.tar.gz", hash = "sha256:828a1f891d7804028af97a17750228ce7741cbf160028f1c17488cdb063b4872", size = 16516 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7b/66/2021a17bffb000a4fa10a8d4c7edc442694e4e1c9e71b01a7650888fea15/ape_optimism-0.8.2-py3-none-any.whl", hash = "sha256:ef21368cfd0dd7a673b0f455f14d122016b8fb1246ca15e5d10653eefaff36b9", size = 8306 },
 ]
 
 [[package]]
@@ -1127,6 +1154,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "ape-alchemy" },
+    { name = "ape-base" },
     { name = "ape-fantom" },
     { name = "ape-foundry" },
     { name = "ape-solidity" },
@@ -1141,6 +1169,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "ape-alchemy", specifier = ">=0.8.5" },
+    { name = "ape-base", specifier = ">=0.8.1" },
     { name = "ape-fantom", specifier = ">=0.8.3" },
     { name = "ape-foundry", specifier = ">=0.8.6" },
     { name = "ape-solidity", specifier = ">=0.8.5" },

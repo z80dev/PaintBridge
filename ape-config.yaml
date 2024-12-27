@@ -29,7 +29,7 @@ fantom:
   default_network: sonictest
   sonictest:
     default_provider: node
-    required_confirmations: 1
+    required_confirmations: 2
 
 solidity:
   evm_version: cancun

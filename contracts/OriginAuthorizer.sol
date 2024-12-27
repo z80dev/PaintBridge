@@ -2,13 +2,29 @@
 
 pragma solidity >=0.8.7 <0.9.0;
 
-import { OAppSender, OAppCore, Ownable, Origin, MessagingFee } from "./MyOApp.sol";
+import { OAppSender, OAppCore, Ownable, Origin, MessagingFee, ILayerZeroEndpointV2 } from "./MyOApp.sol";
+import { OptionsBuilder } from "./OptionsBuilder.sol";
+
+interface IEndpointV2 {
+     function setSendLibrary(
+        address _oapp,
+        uint32 _eid,
+        address _newLib
+     ) external;
+}
 
 contract OriginAuthorizer is OAppSender {
 
-    uint32 public constant DESTINATION_EID = 40349;
+    uint32 public DESTINATION_EID;
 
-    constructor(address endpoint) OAppCore(endpoint, msg.sender) Ownable(msg.sender) {}
+    using OptionsBuilder for bytes;
+
+    //address constant SEND_LIB = 0xC1868e054425D378095A003EcbA3823a5D0135C9;
+
+    constructor(uint32 destinationEID, address endpoint) OAppCore(endpoint, msg.sender) Ownable(msg.sender) {
+        DESTINATION_EID = destinationEID;
+        ILayerZeroEndpointV2(endpoint).setDelegate(msg.sender);
+    }
 
     function setDestinationFactoryAddress(address _destinationFactoryAddress) public onlyOwner {
         bytes32 addressAsBytes32 = bytes32(uint256(uint160(_destinationFactoryAddress)));
@@ -19,7 +35,13 @@ contract OriginAuthorizer is OAppSender {
         address collectionOwner = Ownable(collectionAddress).owner();
         require(collectionOwner == msg.sender, "!OWNER");
         bytes memory payload = abi.encode(collectionAddress);
-        _lzSend(30112, payload, "", MessagingFee(msg.value, 0), payable(address(this)));
+        uint128 _gas = 210000;
+        uint128 _value = 0;
+        bytes memory options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(_gas, _value);
+        _lzSend(DESTINATION_EID, payload, options, MessagingFee(msg.value, 0), payable(msg.sender));
+    }
+
+    fallback() external payable {
     }
 
 }

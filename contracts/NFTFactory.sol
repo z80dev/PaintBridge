@@ -10,7 +10,6 @@ import {Ownable} from "./Ownable.sol";
 contract NFTFactory {
 
     function deployERC721(address originalAddress,
-                          address originalOwner,
                           string memory name,
                           string memory symbol,
                           string memory baseURI,
@@ -26,7 +25,6 @@ contract NFTFactory {
     }
 
     function deployERC721Enumerable(address originalAddress,
-                                    address originalOwner,
                                     string memory name,
                                     string memory symbol,
                                     string memory baseURI,
@@ -42,7 +40,6 @@ contract NFTFactory {
     }
 
     function deployERC1155(address originalAddress,
-                           address originalOwner,
                            address royaltyRecipient,
                            uint256 royaltyBps) public returns (address)
     {
