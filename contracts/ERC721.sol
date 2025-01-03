@@ -82,7 +82,7 @@ contract ERC721 is ERC721Base, ERC2981, Ownable {
         _baseURI = baseURI;
     }
 
-    function batchSetTokenURIs(uint256 startId, string[] calldata uris) public {
+    function batchSetTokenURIs(uint256 startId, string[] calldata uris) public onlyOwner {
         for (uint256 i = 0; i < uris.length; ++i) {
             _tokenURIs[startId + i] = uris[i];
         }
