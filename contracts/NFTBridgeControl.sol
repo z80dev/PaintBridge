@@ -12,7 +12,7 @@ contract NFTBridgeControl is OAppReceiver {
     mapping (address => address) public originalOwnerForCollection;
     mapping (address => bool) public canDeploy;
     mapping(address => bool) public bridgingApproved;
-    uint32 public constant EXPECTED_EID = 40349; // Sonic Testnet (round-tripping msgs on same chain during testing)
+    uint32 public immutable EXPECTED_EID; // Sonic Testnet (round-tripping msgs on same chain during testing)
     address originAuthorizerAddress;
     INFTFactory public nftFactory;
 
@@ -29,10 +29,11 @@ contract NFTBridgeControl is OAppReceiver {
     error Forbidden();
     error InvalidCollectionOwner();
 
-    constructor(address endpoint, address factory) OAppCore(endpoint, msg.sender) Ownable(msg.sender) {
+    constructor(address endpoint, address factory, uint32 expectedEID) OAppCore(endpoint, msg.sender) Ownable(msg.sender) {
         canDeploy[msg.sender] = true;
         nftFactory = INFTFactory(factory);
         ILayerZeroEndpointV2(endpoint).setDelegate(msg.sender);
+        EXPECTED_EID = expectedEID;
     }
 
     function setOriginAuthorizer(address _originAuthorizerAddress) public onlyOwner {
@@ -128,6 +129,10 @@ contract NFTBridgeControl is OAppReceiver {
         bridgedAddressForOriginal[originalAddress] = newCollection;
         originalOwnerForCollection[newCollection] = originalOwner;
         return newCollection;
+    }
+
+    function withdraw() public onlyOwner {
+        payable(msg.sender).transfer(address(this).balance);
     }
 
     fallback() external payable {

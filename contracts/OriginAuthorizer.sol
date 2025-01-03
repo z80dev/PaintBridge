@@ -15,15 +15,14 @@ interface IEndpointV2 {
 
 contract OriginAuthorizer is OAppSender {
 
-    uint32 public DESTINATION_EID;
+    uint32 public immutable DESTINATION_EID;
 
     using OptionsBuilder for bytes;
 
-    //address constant SEND_LIB = 0xC1868e054425D378095A003EcbA3823a5D0135C9;
-
-    constructor(uint32 destinationEID, address endpoint) OAppCore(endpoint, msg.sender) Ownable(msg.sender) {
+    constructor(uint32 destinationEID, address endpoint, uint32 destinationEid) OAppCore(endpoint, msg.sender) Ownable(msg.sender) {
         DESTINATION_EID = destinationEID;
         ILayerZeroEndpointV2(endpoint).setDelegate(msg.sender);
+        DESTINATION_EID = destinationEid;
     }
 
     function setDestinationFactoryAddress(address _destinationFactoryAddress) public onlyOwner {
@@ -39,6 +38,10 @@ contract OriginAuthorizer is OAppSender {
         uint128 _value = 0;
         bytes memory options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(_gas, _value);
         _lzSend(DESTINATION_EID, payload, options, MessagingFee(msg.value, 0), payable(msg.sender));
+    }
+
+    function withdraw() external onlyOwner {
+        payable(msg.sender).transfer(address(this).balance);
     }
 
     fallback() external payable {

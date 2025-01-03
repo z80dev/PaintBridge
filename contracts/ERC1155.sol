@@ -8,10 +8,9 @@ import {Ownable} from "./Ownable.sol";
 
 contract ERC1155 is ERC1155Base, ERC2981, Ownable {
 
-    address public originalCollectionAddress;
+    address public immutable originalCollectionAddress;
 
     // admin permission stuff
-    mapping(address => bool) private _admins;
     mapping(address => bool) private _minters;
     bool public mintingEnabled = true;
 
@@ -26,16 +25,15 @@ contract ERC1155 is ERC1155Base, ERC2981, Ownable {
     constructor(address originalAddress, address royaltyRecipient, uint256 royaltyBps) ERC2981(royaltyRecipient, royaltyBps) Ownable(msg.sender) {
         originalCollectionAddress = originalAddress;
         _minters[msg.sender] = true;
-        _admins[msg.sender] = true;
     }
 
-    function setCanMint(address newMinter) external {
-        require(_minters[msg.sender], "ERC1155: FORBIDDEN");
+    function setCanMint(address newMinter) external onlyOwner {
         _minters[newMinter] = true;
         emit MintRightsGranted(newMinter);
     }
 
     function renounceMintingRights() external {
+        require(_minters[msg.sender], "!MINTER");
         _minters[msg.sender] = false;
         emit MintRightsRevoked(msg.sender);
     }
@@ -60,7 +58,7 @@ contract ERC1155 is ERC1155Base, ERC2981, Ownable {
         }
     }
 
-    function batchSetTokenURIs(uint256 startId, string[] calldata uris) public {
+    function batchSetTokenURIs(uint256 startId, string[] calldata uris) public onlyOwner {
         for (uint256 i = 0; i < uris.length; ++i) {
             _tokenURIs[startId + i] = uris[i];
         }

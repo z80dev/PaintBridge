@@ -9,7 +9,7 @@ import {Ownable} from "./Ownable.sol";
 contract ERC721 is ERC721Base, ERC2981, Ownable {
 
     // the address of the original collection on Fantom
-    address public originalCollectionAddress;
+    address public immutable originalCollectionAddress;
 
     // address allowed to mint, will likely be just bridge admin address
     mapping(address => bool) private _admins;
