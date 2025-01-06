@@ -3,6 +3,7 @@
 from ape.api.address import Address
 import pytest
 
+DUMMY_EID = 1
 
 @pytest.fixture
 def deployer(accounts):
@@ -18,13 +19,12 @@ def factory(project, deployer):
 
 @pytest.fixture
 def bridge_control(project, deployer, mock_endpoint, factory):
-    return project.NFTBridgeControl.deploy(mock_endpoint, factory, sender=deployer)
+    return project.NFTBridgeControl.deploy(mock_endpoint, factory, DUMMY_EID, sender=deployer)
 
 
 def test_factory_deploy(factory):
     assert factory is not None
     assert factory.address is not None
-
 
 def test_deploy_collection_through_factory(bridge_control, deployer, project):
     original_address = Address(1001)
