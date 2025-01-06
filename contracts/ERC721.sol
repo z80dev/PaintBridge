@@ -113,15 +113,6 @@ contract ERC721 is ERC721Base, ERC2981, Ownable {
         }
     }
 
-    function bulkAirdrop2(address[] calldata tos, uint256[] calldata ids) public {
-        require(_minters[msg.sender] || msg.sender == owner(), "ERC721: FORBIDDEN");
-        require(mintingEnabled, "ERC721: MINTING_CLOSED");
-        if (tos.length != ids.length) revert MismatchedLengths();
-        for (uint256 i = 0; i < tos.length; ++i) {
-            _mint(tos[i], ids[i]);
-        }
-    }
-
     /* ERC165 */
 
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool result) {

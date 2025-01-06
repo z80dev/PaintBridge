@@ -38,8 +38,6 @@ contract ERC721Enumerable is ERC721 {
                 uint256 royaltyBps) ERC721(originalAddress, name, symbol, baseURI, hasExtension, royaltyRecipient, royaltyBps) {}
 
     function _beforeTokenTransfer(address _from, address _to, uint256 _tokenId) internal override {
-        // enumeration changes depend on balance updates
-        // so we have to run this after transfers, not before
         if (_from == address(0)) {
             _addTokenToAllTokensEnumeration(_tokenId);
         } else if (_from != _to){
@@ -91,7 +89,10 @@ contract ERC721Enumerable is ERC721 {
         // To prevent a gap in from's tokens array, we store the last token in the index of the token to delete, and
         // then delete the last slot (swap and pop).
 
-        uint256 lastTokenIndex = balanceOf(from);
+        // this decrement is safe because balanceOf has not been updated yet
+        // so if a user is sending their last token, balanceOf(from) will return 1
+        // and the value of lastTokenIndex will correctly be 0
+        uint256 lastTokenIndex = balanceOf(from) - 1;
         uint256 tokenIndex = _ownedTokensIndex[tokenId];
 
         mapping(uint256 index => uint256) storage _ownedTokensByOwner = _ownedTokens[from];

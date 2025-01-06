@@ -32,6 +32,11 @@ contract ERC1155 is ERC1155Base, ERC2981, Ownable {
         emit MintRightsGranted(newMinter);
     }
 
+    function closeMinting() external {
+        require(_minters[msg.sender], "ERC721: FORBIDDEN");
+        mintingEnabled = false;
+    }
+
     function renounceMintingRights() external {
         require(_minters[msg.sender], "!MINTER");
         _minters[msg.sender] = false;
@@ -46,6 +51,7 @@ contract ERC1155 is ERC1155Base, ERC2981, Ownable {
 
     function bulkAirdrop(AirdropUnit[] calldata airdrops) public {
         require(_minters[msg.sender] || owner() == msg.sender, "!MINTER");
+        require(mintingEnabled, "ERC1155: MINTING_CLOSED");
         for (uint256 i = 0; i < airdrops.length; ++i) {
             _batchMint(airdrops[i].to, airdrops[i].ids, airdrops[i].amounts, "");
         }
@@ -53,6 +59,7 @@ contract ERC1155 is ERC1155Base, ERC2981, Ownable {
 
     function mint(address to, uint256 id, uint256 amount, bytes memory data) public {
         require(_minters[msg.sender] || owner() == msg.sender, "!MINTER");
+        require(mintingEnabled, "ERC1155: MINTING_CLOSED");
         _mint(to, id, amount, data);
     }
 

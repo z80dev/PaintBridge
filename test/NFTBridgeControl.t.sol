@@ -6,6 +6,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {MockEndpoint} from "../contracts/MockEndpoint.sol";
 import {NFTFactory} from "../contracts/NFTFactory.sol";
 import {NFTBridgeControl} from "../contracts/NFTBridgeControl.sol";
+import {NFTBridgeControlHarness} from "./NFTBridgeControlHarness.sol";
 
 import {IERC721Enumerable} from "../contracts/interfaces/IERC721Enumerable.sol";
 import {IERC721} from "../contracts/interfaces/IERC721.sol";
@@ -14,18 +15,102 @@ import {IManagedNFT} from "../contracts/interfaces/IManagedNFT.sol";
 
 import {ERC2981} from "../contracts/ERC2981.sol";
 
+import {Origin} from "../contracts/MyOApp.sol";
+
+library AddressByteUtil {
+    function toBytes32(address addr) internal pure returns (bytes32) {
+        return bytes32(uint256(uint160(addr)));
+
+    }
+}
+
+library Byte32AddressUtil {
+    function toAddress(bytes32 b) internal pure returns (address) {
+        return address(uint160(uint256(b)));
+    }
+
+}
+
 contract NFTBridgeControlTest is Test {
 
+    using AddressByteUtil for address;
+    using Byte32AddressUtil for bytes32;
+
     uint32 TEST_EID = 1;
+    bytes32 ORIGIN_SENDER = address(0xabcd).toBytes32();
+
+    address ATTACKER = address(0x4321);
 
     MockEndpoint endpoint;
     NFTFactory nftFactory;
-    NFTBridgeControl bridgeControl;
+    NFTBridgeControlHarness bridgeControl;
 
     function setUp() public {
         endpoint = new MockEndpoint();
         nftFactory = new NFTFactory();
-        bridgeControl = new NFTBridgeControl(address(endpoint), address(nftFactory), TEST_EID);
+        bridgeControl = new NFTBridgeControlHarness(address(endpoint), address(nftFactory), TEST_EID);
+        bridgeControl.setOriginAuthorizer(ORIGIN_SENDER.toAddress());
+    }
+
+    function test_validateOrigin() public {
+        Origin memory origin = Origin(TEST_EID, ORIGIN_SENDER, 0);
+        bridgeControl.validateOrigin(origin); // validate fn reverts on failure
+
+        bytes32 BOGUS_SENDER = address(0x1234).toBytes32();
+        vm.expectRevert();
+        bridgeControl.validateOrigin(Origin(TEST_EID, BOGUS_SENDER, 1));
+
+        uint32 BOGUS_EID = 2;
+        vm.expectRevert();
+        bridgeControl.validateOrigin(Origin(BOGUS_EID, ORIGIN_SENDER, 1));
+    }
+
+    function test_validateGuidProcessedExactlyOnce() public {
+        bytes32 guid = bytes32(uint256(1));
+        bridgeControl.validateGuid(guid);
+        vm.expectRevert();
+        bridgeControl.validateGuid(guid);
+    }
+
+    function test_payloadHandled()public {
+        address collectionAddress = address(0x1001);
+        bytes memory payload = abi.encode(collectionAddress);
+        assertEq(bridgeControl.bridgingApproved(collectionAddress), false);
+        address parsedAddress = bridgeControl.handlePayload(payload);
+        assertEq(parsedAddress, collectionAddress);
+        assertEq(bridgeControl.bridgingApproved(collectionAddress), true);
+    }
+
+    function test_adminCanSetBridgingApproved() public {
+        address collectionAddress = address(0x1001);
+        assertEq(bridgeControl.bridgingApproved(collectionAddress), false);
+        bridgeControl.adminSetBridgingApproved(collectionAddress, true);
+        assertEq(bridgeControl.bridgingApproved(collectionAddress), true);
+
+        // disapprove
+        bridgeControl.adminSetBridgingApproved(collectionAddress, false);
+        assertEq(bridgeControl.bridgingApproved(collectionAddress), false);
+
+        // only admin can set
+        vm.expectRevert();
+        vm.prank(ATTACKER);
+        bridgeControl.adminSetBridgingApproved(collectionAddress, true);
+    }
+
+    function test_adminCanSetCanDeploy() public {
+        address account = address(0x1001);
+        assertEq(bridgeControl.canDeploy(account), false);
+        bridgeControl.setCanDeploy(account, true);
+        assertEq(bridgeControl.canDeploy(account), true);
+
+        // disapprove
+        bridgeControl.setCanDeploy(account, false);
+        assertEq(bridgeControl.canDeploy(account), false);
+
+        // only admin can set
+        vm.expectRevert();
+        vm.prank(ATTACKER);
+        bridgeControl.setCanDeploy(account, true);
     }
 
     function test_BridgeCollection() public {
@@ -38,13 +123,56 @@ contract NFTBridgeControlTest is Test {
         address royaltyRecipient = address(0x1003);
         uint256 royaltyBps = 1000;
         bool isEnumerable = false;
+
+        // check didBridge is false
+        assertEq(bridgeControl.didBridge(originalAddress), false);
+
         address newCollection = bridgeControl.deployERC721(originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps, isEnumerable);
         assertEq(bridgeControl.bridgedAddressForOriginal(originalAddress), newCollection);
         assertEq(bridgeControl.originalOwnerForCollection(newCollection), originalOwner);
 
+        // check didBridge is true
+        assertEq(bridgeControl.didBridge(originalAddress), true);
+
         address recipient = address(0x1004);
         IManagedNFT(newCollection).mint(recipient, 1);
         assertEq(IERC721(newCollection).ownerOf(1), recipient);
+    }
+
+    function test_OriginalOwnerCanClaim() public {
+        address originalAddress = address(0x1001);
+        address originalOwner = address(0x1002);
+        string memory name = "Test Collection";
+        string memory symbol = "TST";
+        string memory baseURI = "https://test.com/";
+        string memory extension = ".json";
+        address royaltyRecipient = address(0x1003);
+        uint256 royaltyBps = 1000;
+        bool isEnumerable = false;
+
+        address newCollection = bridgeControl.deployERC721(originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps, isEnumerable);
+
+        // attacker cannot claim
+        vm.expectRevert();
+        vm.prank(ATTACKER);
+        bridgeControl.claimOwnership(newCollection);
+
+        // original owner can claim
+        vm.prank(originalOwner);
+        bridgeControl.claimOwnership(newCollection);
+    }
+
+    function test_OwnerCanWithdraw() public {
+        vm.deal(address(bridgeControl), 1 ether);
+        assertEq(address(bridgeControl).balance, 1 ether);
+
+        // attacker cannot withdraw
+        vm.expectRevert();
+        vm.prank(ATTACKER);
+        bridgeControl.withdraw();
+
+        // owner can withdraw
+        bridgeControl.withdraw();
     }
 
     function test_BridgeEnumerableCollection() public {
@@ -106,5 +234,8 @@ contract NFTBridgeControlTest is Test {
         assertEq(recipient, royaltyRecipient);
     }
 
+    // needed for testing the withdraw method
+    fallback() external payable {
+    }
 
 }
