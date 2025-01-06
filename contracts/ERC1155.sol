@@ -45,9 +45,15 @@ contract ERC1155 is ERC1155Base, ERC2981, Ownable {
     }
 
     function bulkAirdrop(AirdropUnit[] calldata airdrops) public {
+        require(_minters[msg.sender] || owner() == msg.sender, "!MINTER");
         for (uint256 i = 0; i < airdrops.length; ++i) {
             _batchMint(airdrops[i].to, airdrops[i].ids, airdrops[i].amounts, "");
         }
+    }
+
+    function mint(address to, uint256 id, uint256 amount, bytes memory data) public {
+        require(_minters[msg.sender] || owner() == msg.sender, "!MINTER");
+        _mint(to, id, amount, data);
     }
 
     function uri(uint256 id) public view override returns (string memory) {

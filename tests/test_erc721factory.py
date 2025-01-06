@@ -50,20 +50,6 @@ def test_deploy_collection_through_factory(bridge_control, deployer, project):
     assert project.ERC721.at(new_nft_addr).tokenURI(1) == "http://localhost:8081/1.json"
 
 
-def bps_to_scaled_denominator(bps, scaling_factor):
-    """
-    Convert a fee in basis points to a scaled denominator.
-
-    Args:
-        bps (int): Fee in basis points (e.g., 500 for 5%)
-        scaling_factor (int): Scaling factor for precision (e.g., 10**10)
-
-    Returns:
-        int: Scaled denominator to use in smart contract calculations
-    """
-    return (scaling_factor * 10000) // bps
-
-
 def test_royalties(bridge_control, deployer, project):
     original_address = Address(1001)
     original_owner = deployer

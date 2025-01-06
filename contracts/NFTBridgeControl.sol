@@ -20,6 +20,7 @@ contract NFTBridgeControl is OAppReceiver {
 
     event CollectionOwnerBridgingApproved(address collectionOwner, address collectionAddress, bool approved);
     event AdminBridgingApproved(address collectionAddress, bool approved);
+    event CanDeploySet(address account, bool canDeploy);
 
     error AlreadyBridged();
     error NotApprovedForBridging();
@@ -73,6 +74,7 @@ contract NFTBridgeControl is OAppReceiver {
 
     function setCanDeploy(address account, bool can) public onlyOwner {
         canDeploy[account] = can;
+        emit CanDeploySet(account, can);
     }
 
     function didBridge(address originalAddress) public view returns (bool) {
@@ -124,7 +126,7 @@ contract NFTBridgeControl is OAppReceiver {
         if (bridgedAddressForOriginal[originalAddress] != address(0)) {
             revert AlreadyBridged();
         }
-        address newCollection = nftFactory.deployERC1155(originalAddress, royaltyRecipient, royaltyBps, uri);
+        address newCollection = nftFactory.deployERC1155(originalAddress, royaltyRecipient, royaltyBps);
         IManagedNFT(newCollection).setCanMint(msg.sender);
         bridgedAddressForOriginal[originalAddress] = newCollection;
         originalOwnerForCollection[newCollection] = originalOwner;

@@ -21,6 +21,6 @@ interface INFTFactory {
 
     function deployERC1155(address originalAddress,
                            address royaltyRecipient,
-                           uint256 royaltyBps,
-                           string memory uri) external returns (address);
+                           uint256 royaltyBps
+                           ) external returns (address);
 }
