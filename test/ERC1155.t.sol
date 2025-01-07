@@ -26,6 +26,11 @@ contract ERC1155Test is Test {
         vm.prank(attacker);
         nft.mint(attacker, 2, 1, "");
 
+        // non-deployer cannot renounce minting rights
+        vm.expectRevert();
+        vm.prank(attacker);
+        nft.renounceMintingRights();
+
         // deployer can grant minting rights
         nft.setCanMint(attacker);
         vm.prank(attacker);
@@ -49,45 +54,65 @@ contract ERC1155Test is Test {
         nft.mint(validRecipient, 4, 1, "");
     }
 
-    // function test_CanAirdrop() public {
-    //     uint256[] memory ids = new uint256[](3);
-    //     ids[0] = 1;
-    //     ids[1] = 2;
-    //     ids[2] = 3;
-    //     ERC721.AirdropUnit memory unit = ERC721.AirdropUnit({
-    //         to: validRecipient,
-    //         ids: ids
-    //     });
-    //     ERC721.AirdropUnit[] memory units = new ERC721.AirdropUnit[](1);
-    //     units[0] = unit;
+    function test_CanAirdrop() public {
+        uint256[] memory ids = new uint256[](3);
+        ids[0] = 1;
+        ids[1] = 2;
+        ids[2] = 3;
+        uint256[] memory amounts = new uint256[](3);
+        amounts[0] = 1;
+        amounts[1] = 1;
+        amounts[2] = 1;
+        ERC1155.AirdropUnit memory unit = ERC1155.AirdropUnit({
+            to: validRecipient,
+            ids: ids,
+            amounts: amounts
+        });
+        ERC1155.AirdropUnit[] memory units = new ERC1155.AirdropUnit[](1);
+        units[0] = unit;
 
-    //     // airdrop fails if not admin
-    //     address attacker = address(0x4321);
-    //     vm.expectRevert();
-    //     vm.prank(attacker);
-    //     nft.bulkAirdrop(units);
+        // airdrop fails if not admin
+        address attacker = address(0x4321);
+        vm.expectRevert();
+        vm.prank(attacker);
+        nft.bulkAirdrop(units);
 
-    //     // succesful airdrop
-    //     nft.bulkAirdrop(units);
-    //     assertEq(nft.ownerOf(1), validRecipient);
+        // succesful airdrop
+        nft.bulkAirdrop(units);
+        assertEq(nft.balanceOf(validRecipient, 1), 1);
 
-    //     // airdrop fails if tokenIds already minted
-    //     vm.expectRevert();
-    //     nft.bulkAirdrop(units);
+        // airdrop fails if amounts length mismatch
+        uint256[] memory ids1 = new uint256[](1);
+        ids1[0] = 4;
+        uint256[] memory amounts1 = new uint256[](2);
+        amounts1[0] = 1;
+        amounts1[1] = 1;
+        ERC1155.AirdropUnit memory unit1 = ERC1155.AirdropUnit({
+            to: validRecipient,
+            ids: ids1,
+            amounts: amounts1
+        });
+        ERC1155.AirdropUnit[] memory units1 = new ERC1155.AirdropUnit[](1);
+        units1[0] = unit1;
+        vm.expectRevert();
+        nft.bulkAirdrop(units1);
 
-    //     // airdrop fails if mint is closed
-    //     nft.closeMinting();
-    //     uint256[] memory ids2 = new uint256[](1);
-    //     ids2[0] = 4;
-    //     ERC721.AirdropUnit memory unit2 = ERC721.AirdropUnit({
-    //         to: validRecipient,
-    //         ids: ids2
-    //     });
-    //     ERC721.AirdropUnit[] memory units2 = new ERC721.AirdropUnit[](1);
-    //     units2[0] = unit2;
-    //     vm.expectRevert();
-    //     nft.bulkAirdrop(units2);
-    // }
+        // airdrop fails if mint is closed
+        nft.closeMinting();
+        uint256[] memory ids2 = new uint256[](1);
+        ids2[0] = 4;
+        uint256[] memory amounts2 = new uint256[](1);
+        amounts2[0] = 1;
+        ERC1155.AirdropUnit memory unit2 = ERC1155.AirdropUnit({
+            to: validRecipient,
+            ids: ids2,
+            amounts: amounts2
+        });
+        ERC1155.AirdropUnit[] memory units2 = new ERC1155.AirdropUnit[](1);
+        units2[0] = unit2;
+        vm.expectRevert();
+        nft.bulkAirdrop(units2);
+    }
 
     function test_AdminCanBatchSetTokenURIs() public {
         uint256[] memory ids = new uint256[](3);
@@ -123,6 +148,19 @@ contract ERC1155Test is Test {
         nft.batchSetTokenURIs(1, uris);
     }
 
+    function test_SetRoyalties() public {
+        nft.setRoyalties(royaltyRecipient, royaltyBps);
+        (address recipient, uint256 fee) = nft.royaltyInfo(0, 1 ether);
+        assertEq(recipient, royaltyRecipient);
+        assertEq(fee, 1 ether * royaltyBps / 10000);
+
+        // only admin can set royalties
+        address attacker = address(0x4321);
+        vm.expectRevert();
+        vm.prank(attacker);
+        nft.setRoyalties(attacker, royaltyBps);
+    }
+
     function test_URI() public {
         // test tokenURI
         nft.mint(validRecipient, 2, 1, "");
@@ -132,7 +170,7 @@ contract ERC1155Test is Test {
         assertEq(keccak256(bytes(nft.uri(2))), keccak256(bytes("uri2")));
     }
 
-    function testFail_tokenURITokenDoesNotExist() public {
+    function testFail_tokenURINotSet() public {
         nft.uri(1);
     }
 

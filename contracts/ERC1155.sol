@@ -19,8 +19,6 @@ contract ERC1155 is ERC1155Base, ERC2981, Ownable {
 
     event MintRightsGranted(address indexed minter);
     event MintRightsRevoked(address indexed minter);
-    event AdminRightsGranted(address indexed admin);
-    event AdminRightsRevoked(address indexed admin);
 
     constructor(address originalAddress, address royaltyRecipient, uint256 royaltyBps) ERC2981(royaltyRecipient, royaltyBps) Ownable(msg.sender) {
         originalCollectionAddress = originalAddress;
