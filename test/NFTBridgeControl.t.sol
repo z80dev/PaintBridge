@@ -49,7 +49,7 @@ contract NFTBridgeControlTest is Test {
         endpoint = new MockEndpoint();
         nftFactory = new NFTFactory();
         bridgeControl = new NFTBridgeControlHarness(address(endpoint), address(nftFactory), TEST_EID);
-        bridgeControl.setOriginAuthorizer(ORIGIN_SENDER.toAddress());
+        bridgeControl.setOriginCaller(ORIGIN_SENDER.toAddress());
     }
 
     function test_validateOrigin() public {
