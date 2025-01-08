@@ -2,15 +2,14 @@
 
 pragma solidity >=0.8.7 <0.9.0;
 
-import { OAppReceiver, OAppCore, Ownable, Origin, MessagingFee, ILayerZeroEndpointV2 } from "./MyOApp.sol";
+import { Ownable, Origin } from "./MyOApp.sol";
 import { LZControl } from './LZControl.sol';
 import { INFTFactory } from "./interfaces/INFTFactory.sol";
 import { IManagedNFT } from "./interfaces/IManagedNFT.sol";
-import { AddressByteUtil, Byte32AddressUtil } from "./utils/Utils.sol";
+import { Byte32AddressUtil } from "./utils/Utils.sol";
 
 contract NFTBridgeControl is LZControl {
 
-    using AddressByteUtil for address;
     using Byte32AddressUtil for bytes32;
 
     struct BridgedCollectionData {
