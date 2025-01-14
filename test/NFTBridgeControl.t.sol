@@ -10,8 +10,10 @@ import {NFTBridgeControlHarness} from "./NFTBridgeControlHarness.sol";
 
 import {IERC721Enumerable} from "../contracts/interfaces/IERC721Enumerable.sol";
 import {IERC721} from "../contracts/interfaces/IERC721.sol";
+import { ERC721 } from "../contracts/ERC721.sol";
 import {ERC1155} from "../contracts/ERC1155.sol";
-import {IManagedNFT} from "../contracts/interfaces/IManagedNFT.sol";
+import {IManaged721} from "../contracts/interfaces/IManaged721.sol";
+import {IManaged1155} from "../contracts/interfaces/IManaged1155.sol";
 
 import {ERC2981} from "../contracts/ERC2981.sol";
 
@@ -50,7 +52,13 @@ contract NFTBridgeControlTest is Test {
         nftFactory = new NFTFactory();
         bridgeControl = new NFTBridgeControlHarness(address(endpoint), address(nftFactory), TEST_EID);
         bridgeControl.setOriginCaller(ORIGIN_SENDER.toAddress());
+        vm.roll(100000000);
     }
+
+    function _fastForwardThreeMonths() internal {
+        vm.roll(block.number + 777660001);
+    }
+
 
     function test_validateOrigin() public {
         Origin memory origin = Origin(TEST_EID, ORIGIN_SENDER, 0);
@@ -135,8 +143,37 @@ contract NFTBridgeControlTest is Test {
         assertEq(bridgeControl.didBridge(originalAddress), true);
 
         address recipient = address(0x1004);
-        IManagedNFT(newCollection).mint(recipient, 1);
+        bridgeControl.mint721(newCollection, recipient, 1);
         assertEq(IERC721(newCollection).ownerOf(1), recipient);
+    }
+
+    function test_AdminCannotMintAfterAdminPeriod() public {
+        address originalAddress = address(0x1001);
+        address originalOwner = address(0x1002);
+        string memory name = "Test Collection";
+        string memory symbol = "TST";
+        string memory baseURI = "https://test.com/";
+        string memory extension = ".json";
+        address royaltyRecipient = address(0x1003);
+        uint256 royaltyBps = 1000;
+        bool isEnumerable = false;
+
+        // check didBridge is false
+        assertEq(bridgeControl.didBridge(originalAddress), false);
+
+        address newCollection = bridgeControl.deployERC721(originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps, isEnumerable);
+        assertEq(bridgeControl.bridgedAddressForOriginal(originalAddress), newCollection);
+        assertEq(bridgeControl.originalOwnerForCollection(newCollection), originalOwner);
+
+        // check didBridge is true
+        assertEq(bridgeControl.didBridge(originalAddress), true);
+
+        _fastForwardThreeMonths();
+        address recipient = address(0x1004);
+        vm.expectRevert();
+        bridgeControl.mint721(newCollection, recipient, 1);
+        //vm.expectRevert();
+        //IERC721(newCollection).ownerOf(1);
     }
 
     function test_OriginalOwnerCanClaim() public {
@@ -194,7 +231,7 @@ contract NFTBridgeControlTest is Test {
         assertEq(enumerable.supportsInterface(0x780e9d63), true);
 
         address recipient = address(0x1004);
-        IManagedNFT(newCollection).mint(recipient, 1);
+        bridgeControl.mint721(newCollection, recipient, 1);
         assertEq(enumerable.totalSupply(), 1);
         assertEq(enumerable.tokenOfOwnerByIndex(recipient, 0), 1);
         assertEq(enumerable.tokenByIndex(0), 1);
@@ -211,9 +248,64 @@ contract NFTBridgeControlTest is Test {
         assertEq(bridgeControl.originalOwnerForCollection(newCollection), originalOwner);
 
         address recipient = address(0x1004);
-        ERC1155(newCollection).mint(recipient, 1, 1, "");
+        bridgeControl.mint1155(newCollection, recipient, 1, 1, "");
         assertEq(ERC1155(newCollection).balanceOf(recipient, 1), 1);
     }
+
+    function test_canMint721ViaAirdrop() public {
+        address originalAddress = address(0x1001);
+        address originalOwner = address(0x1002);
+        string memory name = "Test Collection";
+        string memory symbol = "TST";
+        string memory baseURI = "https://test.com/";
+        string memory extension = ".json";
+        address royaltyRecipient = address(0x1003);
+        uint256 royaltyBps = 1000;
+        bool isEnumerable = false;
+
+        // check didBridge is false
+        assertEq(bridgeControl.didBridge(originalAddress), false);
+
+        address newCollection = bridgeControl.deployERC721(originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps, isEnumerable);
+        assertEq(bridgeControl.bridgedAddressForOriginal(originalAddress), newCollection);
+        assertEq(bridgeControl.originalOwnerForCollection(newCollection), originalOwner);
+
+        address recipient = address(0x1004);
+
+        ERC721.AirdropUnit[] memory units = new ERC721.AirdropUnit[](1);
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = 1;
+        units[0] = ERC721.AirdropUnit(recipient, ids);
+
+        bridgeControl.airdrop721(newCollection, units);
+        assertEq(IERC721(newCollection).ownerOf(1), recipient);
+    }
+
+
+    function test_canMint1155ViaAirdrop() public {
+        address originalAddress = address(0x1001);
+        address originalOwner = address(0x1002);
+        address royaltyRecipient = address(0x1003);
+        uint256 royaltyBps = 1000;
+        string memory uri = "https://test.com/";
+        address newCollection = bridgeControl.deployERC1155(originalAddress, originalOwner, royaltyRecipient, royaltyBps, uri);
+        assertEq(bridgeControl.bridgedAddressForOriginal(originalAddress), newCollection);
+        assertEq(bridgeControl.originalOwnerForCollection(newCollection), originalOwner);
+
+        address recipient = address(0x1004);
+
+        ERC1155.AirdropUnit[] memory units = new ERC1155.AirdropUnit[](1);
+        uint256[] memory ids = new uint256[](1);
+        uint256[] memory amounts = new uint256[](1);
+        bytes memory data = new bytes(1);
+        ids[0] = 1;
+        amounts[0] = 100;
+        units[0] = ERC1155.AirdropUnit(recipient, ids, amounts, data);
+
+        bridgeControl.airdrop1155(newCollection, units);
+        assertEq(ERC1155(newCollection).balanceOf(recipient, 1), 100);
+    }
+
 
     function test_RoyaltyPctCalculation() public {
         address originalAddress = address(0x1001);

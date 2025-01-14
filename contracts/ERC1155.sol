@@ -45,13 +45,14 @@ contract ERC1155 is ERC1155Base, ERC2981, Ownable {
         address to;
         uint256[] ids;
         uint256[] amounts;
+        bytes data;
     }
 
     function bulkAirdrop(AirdropUnit[] calldata airdrops) public {
         require(_minters[msg.sender] || owner() == msg.sender, "!MINTER");
         require(mintingEnabled, "ERC1155: MINTING_CLOSED");
         for (uint256 i = 0; i < airdrops.length; ++i) {
-            _batchMint(airdrops[i].to, airdrops[i].ids, airdrops[i].amounts, "");
+            _batchMint(airdrops[i].to, airdrops[i].ids, airdrops[i].amounts, airdrops[i].data);
         }
     }
 

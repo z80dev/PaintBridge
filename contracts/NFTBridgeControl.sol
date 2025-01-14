@@ -2,24 +2,26 @@
 
 pragma solidity >=0.8.7 <0.9.0;
 
-import { Ownable, Origin } from "./MyOApp.sol";
+import { Origin } from "./MyOApp.sol";
+import { Ownable } from "./Ownable.sol";
 import { LZControl } from './LZControl.sol';
 import { INFTFactory } from "./interfaces/INFTFactory.sol";
-import { IManagedNFT } from "./interfaces/IManagedNFT.sol";
+import { IManaged721 } from "./interfaces/IManaged721.sol";
+import { IManaged1155 } from "./interfaces/IManaged1155.sol";
 import { Byte32AddressUtil } from "./utils/Utils.sol";
+import { ERC721 } from "./ERC721.sol";
+import { ERC1155 } from "./ERC1155.sol";
 
 contract NFTBridgeControl is LZControl {
 
     using Byte32AddressUtil for bytes32;
 
-    struct BridgedCollectionData {
-        address originalAddress;    // address on origin chain
-        address originalOwner;      // owner on origin chain
-        uint256 bridgedBlockNumber; // block number when bridging occured
-    }
+    uint256 constant THREE_MONTHS = 77760000;
 
     mapping (address => address) public bridgedAddressForOriginal;
+    mapping (address => address) public originalAddressForBridged;
     mapping (address => address) public originalOwnerForCollection;
+    mapping (address => uint256) public blockNumberBridged;
     mapping (address => bool) public canDeploy;
     mapping(address => bool) public bridgingApproved;
     INFTFactory public nftFactory;
@@ -32,6 +34,7 @@ contract NFTBridgeControl is LZControl {
     error NotApprovedForBridging();
     error Forbidden();
     error InvalidCollectionOwner();
+    error AdminPeriodExpired(uint256 bl1, uint256 bl2);
 
     constructor(address endpoint, address factory, uint32 expectedEID) LZControl(endpoint, expectedEID) {
         canDeploy[msg.sender] = true;
@@ -42,6 +45,19 @@ contract NFTBridgeControl is LZControl {
         address collectionAddress = abi.decode(payload, (address));
         bridgingApproved[collectionAddress] = true;
         return collectionAddress;
+    }
+
+    function _checkBridgedWithin3Months(address collectionAddress) internal {
+        address originalAddress = originalAddressForBridged[collectionAddress];
+        if (block.number - blockNumberBridged[originalAddress] > THREE_MONTHS) {
+            revert AdminPeriodExpired(block.number, blockNumberBridged[collectionAddress]);
+        }
+    }
+
+    modifier onlyAdminDuringAdminPeriod(address collectionAddress) {
+        _checkOwner();
+        _checkBridgedWithin3Months(collectionAddress);
+        _;
     }
 
     function _lzReceive(
@@ -98,8 +114,9 @@ contract NFTBridgeControl is LZControl {
         } else {
             newCollection = nftFactory.deployERC721(originalAddress, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
         }
-        IManagedNFT(newCollection).setCanMint(msg.sender);
         bridgedAddressForOriginal[originalAddress] = newCollection;
+        originalAddressForBridged[newCollection] = originalAddress;
+        blockNumberBridged[originalAddress] = block.number;
         originalOwnerForCollection[newCollection] = originalOwner;
         return newCollection;
     }
@@ -116,15 +133,34 @@ contract NFTBridgeControl is LZControl {
             revert AlreadyBridged();
         }
         address newCollection = nftFactory.deployERC1155(originalAddress, royaltyRecipient, royaltyBps);
-        IManagedNFT(newCollection).setCanMint(msg.sender);
         bridgedAddressForOriginal[originalAddress] = newCollection;
+        originalAddressForBridged[newCollection] = originalAddress;
+        blockNumberBridged[originalAddress] = block.number;
         originalOwnerForCollection[newCollection] = originalOwner;
         return newCollection;
     }
 
+    function mint721(address collection, address to, uint256 id) public onlyAdminDuringAdminPeriod(collection) {
+        IManaged721(collection).mint(to, id);
+    }
+
+    function mint1155(address collection, address to, uint256 id, uint256 amount, bytes memory data) public onlyAdminDuringAdminPeriod(collection) {
+        IManaged1155(collection).mint(to, id, amount, data);
+    }
+
+    function airdrop721(address collection, ERC721.AirdropUnit[] calldata airdropUnits) public onlyAdminDuringAdminPeriod(collection) {
+        ERC721(collection).bulkAirdrop(airdropUnits);
+    }
+
+    function airdrop1155(address collection, ERC1155.AirdropUnit[] calldata airdropUnits) public onlyAdminDuringAdminPeriod(collection) {
+        ERC1155(collection).bulkAirdrop(airdropUnits);
+    }
+
+
     function withdraw() public onlyOwner {
         payable(msg.sender).transfer(address(this).balance);
     }
+
 
     fallback() external payable {
     }

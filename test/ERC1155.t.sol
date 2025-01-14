@@ -66,7 +66,8 @@ contract ERC1155Test is Test {
         ERC1155.AirdropUnit memory unit = ERC1155.AirdropUnit({
             to: validRecipient,
             ids: ids,
-            amounts: amounts
+            amounts: amounts,
+            data: ""
         });
         ERC1155.AirdropUnit[] memory units = new ERC1155.AirdropUnit[](1);
         units[0] = unit;
@@ -90,7 +91,8 @@ contract ERC1155Test is Test {
         ERC1155.AirdropUnit memory unit1 = ERC1155.AirdropUnit({
             to: validRecipient,
             ids: ids1,
-            amounts: amounts1
+            amounts: amounts1,
+            data: ""
         });
         ERC1155.AirdropUnit[] memory units1 = new ERC1155.AirdropUnit[](1);
         units1[0] = unit1;
@@ -106,7 +108,8 @@ contract ERC1155Test is Test {
         ERC1155.AirdropUnit memory unit2 = ERC1155.AirdropUnit({
             to: validRecipient,
             ids: ids2,
-            amounts: amounts2
+            amounts: amounts2,
+            data: ""
         });
         ERC1155.AirdropUnit[] memory units2 = new ERC1155.AirdropUnit[](1);
         units2[0] = unit2;
@@ -126,7 +129,8 @@ contract ERC1155Test is Test {
         ERC1155.AirdropUnit memory unit = ERC1155.AirdropUnit({
             to: validRecipient,
             ids: ids,
-            amounts: amounts
+            amounts: amounts,
+            data: ""
         });
         ERC1155.AirdropUnit[] memory units = new ERC1155.AirdropUnit[](1);
         units[0] = unit;
