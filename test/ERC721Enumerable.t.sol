@@ -6,13 +6,14 @@ import {Test, console} from "forge-std/Test.sol";
 import {ERC721Enumerable} from "../contracts/ERC721Enumerable.sol";
 
 contract ERC721EnumerableTest is Test {
-
     ERC721Enumerable nft;
     address royaltyRecipient = address(0x5678);
     uint256 royaltyBps = 1000;
 
     function setUp() public {
-        nft = new ERC721Enumerable(address(0x1234), "name", "symbol", "baseURI", "extension", royaltyRecipient, royaltyBps);
+        nft = new ERC721Enumerable(
+            address(0x1234), "name", "symbol", "baseURI", "extension", royaltyRecipient, royaltyBps
+        );
     }
 
     function test_TotalSupply() public {
@@ -51,5 +52,4 @@ contract ERC721EnumerableTest is Test {
         vm.expectRevert();
         nft.tokenOfOwnerByIndex(address(this), 0);
     }
-
 }

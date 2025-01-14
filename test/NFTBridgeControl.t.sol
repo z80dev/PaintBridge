@@ -10,7 +10,7 @@ import {NFTBridgeControlHarness} from "./NFTBridgeControlHarness.sol";
 
 import {IERC721Enumerable} from "../contracts/interfaces/IERC721Enumerable.sol";
 import {IERC721} from "../contracts/interfaces/IERC721.sol";
-import { ERC721 } from "../contracts/ERC721.sol";
+import {ERC721} from "../contracts/ERC721.sol";
 import {ERC1155} from "../contracts/ERC1155.sol";
 import {IManaged721} from "../contracts/interfaces/IManaged721.sol";
 import {IManaged1155} from "../contracts/interfaces/IManaged1155.sol";
@@ -22,7 +22,6 @@ import {Origin} from "../contracts/MyOApp.sol";
 library AddressByteUtil {
     function toBytes32(address addr) internal pure returns (bytes32) {
         return bytes32(uint256(uint160(addr)));
-
     }
 }
 
@@ -30,11 +29,9 @@ library Byte32AddressUtil {
     function toAddress(bytes32 b) internal pure returns (address) {
         return address(uint160(uint256(b)));
     }
-
 }
 
 contract NFTBridgeControlTest is Test {
-
     using AddressByteUtil for address;
     using Byte32AddressUtil for bytes32;
 
@@ -59,7 +56,6 @@ contract NFTBridgeControlTest is Test {
         vm.roll(block.number + 777660001);
     }
 
-
     function test_validateOrigin() public {
         Origin memory origin = Origin(TEST_EID, ORIGIN_SENDER, 0);
         bridgeControl.validateOrigin(origin); // validate fn reverts on failure
@@ -80,7 +76,7 @@ contract NFTBridgeControlTest is Test {
         bridgeControl.validateGuid(guid);
     }
 
-    function test_payloadHandled()public {
+    function test_payloadHandled() public {
         address collectionAddress = address(0x1001);
         bytes memory payload = abi.encode(collectionAddress);
         assertEq(bridgeControl.bridgingApproved(collectionAddress), false);
@@ -135,7 +131,9 @@ contract NFTBridgeControlTest is Test {
         // check didBridge is false
         assertEq(bridgeControl.didBridge(originalAddress), false);
 
-        address newCollection = bridgeControl.deployERC721(originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps, isEnumerable);
+        address newCollection = bridgeControl.deployERC721(
+            originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps, isEnumerable
+        );
         assertEq(bridgeControl.bridgedAddressForOriginal(originalAddress), newCollection);
         assertEq(bridgeControl.originalOwnerForCollection(newCollection), originalOwner);
 
@@ -161,7 +159,9 @@ contract NFTBridgeControlTest is Test {
         // check didBridge is false
         assertEq(bridgeControl.didBridge(originalAddress), false);
 
-        address newCollection = bridgeControl.deployERC721(originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps, isEnumerable);
+        address newCollection = bridgeControl.deployERC721(
+            originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps, isEnumerable
+        );
         assertEq(bridgeControl.bridgedAddressForOriginal(originalAddress), newCollection);
         assertEq(bridgeControl.originalOwnerForCollection(newCollection), originalOwner);
 
@@ -187,7 +187,9 @@ contract NFTBridgeControlTest is Test {
         uint256 royaltyBps = 1000;
         bool isEnumerable = false;
 
-        address newCollection = bridgeControl.deployERC721(originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps, isEnumerable);
+        address newCollection = bridgeControl.deployERC721(
+            originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps, isEnumerable
+        );
 
         // attacker cannot claim
         vm.expectRevert();
@@ -222,7 +224,9 @@ contract NFTBridgeControlTest is Test {
         address royaltyRecipient = address(0x1003);
         uint256 royaltyBps = 1000;
         bool isEnumerable = true;
-        address newCollection = bridgeControl.deployERC721(originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps, isEnumerable);
+        address newCollection = bridgeControl.deployERC721(
+            originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps, isEnumerable
+        );
 
         assertEq(bridgeControl.bridgedAddressForOriginal(originalAddress), newCollection);
         assertEq(bridgeControl.originalOwnerForCollection(newCollection), originalOwner);
@@ -243,7 +247,8 @@ contract NFTBridgeControlTest is Test {
         address royaltyRecipient = address(0x1003);
         uint256 royaltyBps = 1000;
         string memory uri = "https://test.com/";
-        address newCollection = bridgeControl.deployERC1155(originalAddress, originalOwner, royaltyRecipient, royaltyBps, uri);
+        address newCollection =
+            bridgeControl.deployERC1155(originalAddress, originalOwner, royaltyRecipient, royaltyBps, uri);
         assertEq(bridgeControl.bridgedAddressForOriginal(originalAddress), newCollection);
         assertEq(bridgeControl.originalOwnerForCollection(newCollection), originalOwner);
 
@@ -266,7 +271,9 @@ contract NFTBridgeControlTest is Test {
         // check didBridge is false
         assertEq(bridgeControl.didBridge(originalAddress), false);
 
-        address newCollection = bridgeControl.deployERC721(originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps, isEnumerable);
+        address newCollection = bridgeControl.deployERC721(
+            originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps, isEnumerable
+        );
         assertEq(bridgeControl.bridgedAddressForOriginal(originalAddress), newCollection);
         assertEq(bridgeControl.originalOwnerForCollection(newCollection), originalOwner);
 
@@ -281,14 +288,14 @@ contract NFTBridgeControlTest is Test {
         assertEq(IERC721(newCollection).ownerOf(1), recipient);
     }
 
-
     function test_canMint1155ViaAirdrop() public {
         address originalAddress = address(0x1001);
         address originalOwner = address(0x1002);
         address royaltyRecipient = address(0x1003);
         uint256 royaltyBps = 1000;
         string memory uri = "https://test.com/";
-        address newCollection = bridgeControl.deployERC1155(originalAddress, originalOwner, royaltyRecipient, royaltyBps, uri);
+        address newCollection =
+            bridgeControl.deployERC1155(originalAddress, originalOwner, royaltyRecipient, royaltyBps, uri);
         assertEq(bridgeControl.bridgedAddressForOriginal(originalAddress), newCollection);
         assertEq(bridgeControl.originalOwnerForCollection(newCollection), originalOwner);
 
@@ -306,7 +313,6 @@ contract NFTBridgeControlTest is Test {
         assertEq(ERC1155(newCollection).balanceOf(recipient, 1), 100);
     }
 
-
     function test_RoyaltyPctCalculation() public {
         address originalAddress = address(0x1001);
         address originalOwner = address(0x1002);
@@ -317,7 +323,9 @@ contract NFTBridgeControlTest is Test {
         address royaltyRecipient = address(0x1003);
         uint256 royaltyBps = 1000;
         bool isEnumerable = true;
-        address newCollection = bridgeControl.deployERC721(originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps, isEnumerable);
+        address newCollection = bridgeControl.deployERC721(
+            originalAddress, originalOwner, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps, isEnumerable
+        );
 
         uint256 ONE_ETH = 1 ether;
         uint256 expectedRoyalty = ONE_ETH / 10;
@@ -327,7 +335,5 @@ contract NFTBridgeControlTest is Test {
     }
 
     // needed for testing the withdraw method
-    fallback() external payable {
-    }
-
+    fallback() external payable {}
 }

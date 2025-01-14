@@ -6,7 +6,6 @@ import {Test, console} from "forge-std/Test.sol";
 import {ERC1155} from "../contracts/ERC1155.sol";
 
 contract ERC1155Test is Test {
-
     ERC1155 nft;
     address royaltyRecipient = address(0x5678);
     uint256 royaltyBps = 1000;
@@ -63,12 +62,8 @@ contract ERC1155Test is Test {
         amounts[0] = 1;
         amounts[1] = 1;
         amounts[2] = 1;
-        ERC1155.AirdropUnit memory unit = ERC1155.AirdropUnit({
-            to: validRecipient,
-            ids: ids,
-            amounts: amounts,
-            data: ""
-        });
+        ERC1155.AirdropUnit memory unit =
+            ERC1155.AirdropUnit({to: validRecipient, ids: ids, amounts: amounts, data: ""});
         ERC1155.AirdropUnit[] memory units = new ERC1155.AirdropUnit[](1);
         units[0] = unit;
 
@@ -88,12 +83,8 @@ contract ERC1155Test is Test {
         uint256[] memory amounts1 = new uint256[](2);
         amounts1[0] = 1;
         amounts1[1] = 1;
-        ERC1155.AirdropUnit memory unit1 = ERC1155.AirdropUnit({
-            to: validRecipient,
-            ids: ids1,
-            amounts: amounts1,
-            data: ""
-        });
+        ERC1155.AirdropUnit memory unit1 =
+            ERC1155.AirdropUnit({to: validRecipient, ids: ids1, amounts: amounts1, data: ""});
         ERC1155.AirdropUnit[] memory units1 = new ERC1155.AirdropUnit[](1);
         units1[0] = unit1;
         vm.expectRevert();
@@ -105,12 +96,8 @@ contract ERC1155Test is Test {
         ids2[0] = 4;
         uint256[] memory amounts2 = new uint256[](1);
         amounts2[0] = 1;
-        ERC1155.AirdropUnit memory unit2 = ERC1155.AirdropUnit({
-            to: validRecipient,
-            ids: ids2,
-            amounts: amounts2,
-            data: ""
-        });
+        ERC1155.AirdropUnit memory unit2 =
+            ERC1155.AirdropUnit({to: validRecipient, ids: ids2, amounts: amounts2, data: ""});
         ERC1155.AirdropUnit[] memory units2 = new ERC1155.AirdropUnit[](1);
         units2[0] = unit2;
         vm.expectRevert();
@@ -126,12 +113,8 @@ contract ERC1155Test is Test {
         amounts[0] = 1;
         amounts[1] = 1;
         amounts[2] = 1;
-        ERC1155.AirdropUnit memory unit = ERC1155.AirdropUnit({
-            to: validRecipient,
-            ids: ids,
-            amounts: amounts,
-            data: ""
-        });
+        ERC1155.AirdropUnit memory unit =
+            ERC1155.AirdropUnit({to: validRecipient, ids: ids, amounts: amounts, data: ""});
         ERC1155.AirdropUnit[] memory units = new ERC1155.AirdropUnit[](1);
         units[0] = unit;
         nft.bulkAirdrop(units);
@@ -177,5 +160,4 @@ contract ERC1155Test is Test {
     function testFail_tokenURINotSet() public {
         nft.uri(1);
     }
-
 }

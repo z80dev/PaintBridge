@@ -6,7 +6,6 @@ import {Test, console} from "forge-std/Test.sol";
 import {ERC721} from "../contracts/ERC721.sol";
 
 contract ERC721Test is Test {
-
     ERC721 nft;
     address royaltyRecipient = address(0x5678);
     uint256 royaltyBps = 1000;
@@ -58,10 +57,7 @@ contract ERC721Test is Test {
         ids[0] = 1;
         ids[1] = 2;
         ids[2] = 3;
-        ERC721.AirdropUnit memory unit = ERC721.AirdropUnit({
-            to: address(this),
-            ids: ids
-        });
+        ERC721.AirdropUnit memory unit = ERC721.AirdropUnit({to: address(this), ids: ids});
         ERC721.AirdropUnit[] memory units = new ERC721.AirdropUnit[](1);
         units[0] = unit;
 
@@ -83,10 +79,7 @@ contract ERC721Test is Test {
         nft.closeMinting();
         uint256[] memory ids2 = new uint256[](1);
         ids2[0] = 4;
-        ERC721.AirdropUnit memory unit2 = ERC721.AirdropUnit({
-            to: address(this),
-            ids: ids2
-        });
+        ERC721.AirdropUnit memory unit2 = ERC721.AirdropUnit({to: address(this), ids: ids2});
         ERC721.AirdropUnit[] memory units2 = new ERC721.AirdropUnit[](1);
         units2[0] = unit2;
         vm.expectRevert();
@@ -98,10 +91,7 @@ contract ERC721Test is Test {
         ids[0] = 1;
         ids[1] = 2;
         ids[2] = 3;
-        ERC721.AirdropUnit memory unit = ERC721.AirdropUnit({
-            to: address(this),
-            ids: ids
-        });
+        ERC721.AirdropUnit memory unit = ERC721.AirdropUnit({to: address(this), ids: ids});
         ERC721.AirdropUnit[] memory units = new ERC721.AirdropUnit[](1);
         units[0] = unit;
         nft.bulkAirdrop(units);
@@ -148,5 +138,4 @@ contract ERC721Test is Test {
     function testFail_tokenURITokenDoesNotExist() public {
         nft.tokenURI(1);
     }
-
 }
