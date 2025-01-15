@@ -4,17 +4,10 @@ pragma solidity ^0.8.4;
 import {ERC721Base} from "./ERC721Base.sol";
 import {LibString} from "./utils/LibString.sol";
 import {ERC2981} from "./ERC2981.sol";
-import {Ownable} from "./Ownable.sol";
+import {PermissionedMintingNFT} from "./PermissionedMintingNFT.sol";
+import {BridgedNFT} from "./BridgedNFT.sol";
 
-contract ERC721 is ERC721Base, ERC2981, Ownable {
-
-    // the address of the original collection on Fantom
-    address public immutable originalCollectionAddress;
-
-    // address allowed to mint, will likely be just bridge admin address
-    mapping(address => bool) private _minters;
-    bool public mintingEnabled = true;
-
+contract ERC721 is ERC721Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
     // NFT Metadata
     string private _name;
     string private _symbol;
@@ -22,64 +15,42 @@ contract ERC721 is ERC721Base, ERC2981, Ownable {
     string private _extension;
     mapping(uint256 => string) private _tokenURIs;
 
-    // custom errors
+    // Custom errors
     error TokenExists();
     error MismatchedLengths();
-    error NotMinter();
-    error MintClosed();
 
-    event MintRightsGranted(address indexed minter);
-    event MintRightsRevoked(address indexed minter);
-    event AdminRightsGranted(address indexed admin);
-    event AdminRightsRevoked(address indexed admin);
-
-    constructor(address originalAddress,
-                string memory name,
-                string memory symbol,
-                string memory baseURI,
-                string memory hasExtension,
-                address royaltyRecipient,
-                uint256 royaltyBps) ERC2981(royaltyRecipient, royaltyBps) Ownable(msg.sender) {
+    constructor(
+        address originalAddress,
+        string memory name,
+        string memory symbol,
+        string memory baseURI,
+        string memory hasExtension,
+        address royaltyRecipient,
+        uint256 royaltyBps
+    ) ERC2981(royaltyRecipient, royaltyBps) PermissionedMintingNFT() BridgedNFT(originalAddress) {
         _name = name;
         _symbol = symbol;
         _baseURI = baseURI;
         _extension = hasExtension;
-        originalCollectionAddress = originalAddress;
     }
 
-    function setCanMint(address newMinter) external onlyOwner {
-        _minters[newMinter] = true;
-        emit MintRightsGranted(newMinter);
-    }
-
-    function renounceMintingRights() external {
-        if (!_minters[msg.sender]) {
-            revert NotMinter();
-        }
-        _minters[msg.sender] = false;
-        emit MintRightsRevoked(msg.sender);
-    }
-
-    function closeMinting() external onlyOwner {
-        mintingEnabled = false;
-    }
-
-    function name() public override view returns (string memory) {
+    function name() public view override returns (string memory) {
         return _name;
     }
 
-    function symbol() public override view returns (string memory) {
+    function symbol() public view override returns (string memory) {
         return _symbol;
     }
 
-    function tokenURI(uint256 tokenId) public override view returns (string memory) {
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
         if (!_exists(tokenId)) revert TokenDoesNotExist();
         if (bytes(_tokenURIs[tokenId]).length != 0) {
             return _tokenURIs[tokenId];
         }
         return string(abi.encodePacked(_baseURI, LibString.toString(tokenId), _extension));
     }
-     function setBaseURI(string memory baseURI) external onlyOwner {
+
+    function setBaseURI(string memory baseURI) external onlyOwner {
         _baseURI = baseURI;
     }
 
@@ -89,13 +60,7 @@ contract ERC721 is ERC721Base, ERC2981, Ownable {
         }
     }
 
-    function mint(address to, uint256 id) public {
-        if (!_minters[msg.sender] && msg.sender != owner()) {
-            revert NotMinter();
-        }
-        if (!mintingEnabled) {
-            revert MintClosed();
-        }
+    function mint(address to, uint256 id) public mintIsOpen onlyMinter {
         if (_exists(id)) revert TokenExists();
         _mint(to, id);
     }
@@ -105,15 +70,7 @@ contract ERC721 is ERC721Base, ERC2981, Ownable {
         uint256[] ids;
     }
 
-
-    function bulkAirdrop(AirdropUnit[] calldata airdropUnits) public {
-        if (!_minters[msg.sender] && msg.sender != owner()) {
-            revert NotMinter();
-        }
-
-        if (!mintingEnabled) {
-            revert MintClosed();
-        }
+    function bulkAirdrop(AirdropUnit[] calldata airdropUnits) public mintIsOpen onlyMinter {
         for (uint256 i = 0; i < airdropUnits.length; ++i) {
             for (uint256 j = 0; j < airdropUnits[i].ids.length; j++) {
                 uint256 id = airdropUnits[i].ids[j];
@@ -122,8 +79,6 @@ contract ERC721 is ERC721Base, ERC2981, Ownable {
             }
         }
     }
-
-    /* ERC165 */
 
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool result) {
         /// @solidity memory-safe-assembly
@@ -138,5 +93,4 @@ contract ERC721 is ERC721Base, ERC2981, Ownable {
     function setRoyalties(address recipient, uint256 bps) external onlyOwner {
         _setRoyalties(recipient, bps);
     }
-
 }

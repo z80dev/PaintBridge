@@ -4,40 +4,14 @@ pragma solidity ^0.8.4;
 import {ERC1155Base} from "./ERC1155Base.sol";
 import {ERC2981} from "./ERC2981.sol";
 import {LibString} from "./utils/LibString.sol";
-import {Ownable} from "./Ownable.sol";
+import {PermissionedMintingNFT} from "./PermissionedMintingNFT.sol";
+import {BridgedNFT} from "./BridgedNFT.sol";
 
-contract ERC1155 is ERC1155Base, ERC2981, Ownable {
-
-    address public immutable originalCollectionAddress;
-
-    // admin permission stuff
-    mapping(address => bool) private _minters;
-    bool public mintingEnabled = true;
-
+contract ERC1155 is ERC1155Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
     // tokenURI overrides everything
     mapping(uint256 => string) private _tokenURIs;
 
-    event MintRightsGranted(address indexed minter);
-    event MintRightsRevoked(address indexed minter);
-
-    constructor(address originalAddress, address royaltyRecipient, uint256 royaltyBps) ERC2981(royaltyRecipient, royaltyBps) Ownable(msg.sender) {
-        originalCollectionAddress = originalAddress;
-    }
-
-    function setCanMint(address newMinter) external onlyOwner {
-        _minters[newMinter] = true;
-        emit MintRightsGranted(newMinter);
-    }
-
-    function closeMinting() external onlyOwner {
-        mintingEnabled = false;
-    }
-
-    function renounceMintingRights() external {
-        require(_minters[msg.sender], "!MINTER");
-        _minters[msg.sender] = false;
-        emit MintRightsRevoked(msg.sender);
-    }
+    error URINotSet();
 
     struct AirdropUnit {
         address to;
@@ -46,29 +20,23 @@ contract ERC1155 is ERC1155Base, ERC2981, Ownable {
         bytes data;
     }
 
-    function bulkAirdrop(AirdropUnit[] calldata airdrops) public {
-        require(_minters[msg.sender] || owner() == msg.sender, "!MINTER");
-        require(mintingEnabled, "ERC1155: MINTING_CLOSED");
+    constructor(
+        address originalAddress,
+        address royaltyRecipient,
+        uint256 royaltyBps
+    ) ERC2981(royaltyRecipient, royaltyBps) PermissionedMintingNFT() BridgedNFT(originalAddress) {}
+
+    function mint(address to, uint256 id, uint256 amount, bytes memory data) public mintIsOpen onlyMinter {
+        _mint(to, id, amount, data);
+    }
+
+    function bulkAirdrop(AirdropUnit[] calldata airdrops) public mintIsOpen onlyMinter {
         for (uint256 i = 0; i < airdrops.length; ++i) {
             _batchMint(airdrops[i].to, airdrops[i].ids, airdrops[i].amounts, airdrops[i].data);
         }
     }
 
-    function mint(address to, uint256 id, uint256 amount, bytes memory data) public {
-        require(_minters[msg.sender] || owner() == msg.sender, "!MINTER");
-        require(mintingEnabled, "ERC1155: MINTING_CLOSED");
-        _mint(to, id, amount, data);
-    }
-
-    function uri(uint256 id) public view override returns (string memory) {
-        if (bytes(_tokenURIs[id]).length != 0) {
-            return _tokenURIs[id];
-        } else {
-            revert("ERC1155: URI not set");
-        }
-    }
-
-    function batchSetTokenURIs(uint256 startId, string[] calldata uris) public onlyOwner {
+    function batchSetTokenURIs(uint256 startId, string[] calldata uris) public onlyMinter {
         for (uint256 i = 0; i < uris.length; ++i) {
             _tokenURIs[startId + i] = uris[i];
         }
@@ -78,4 +46,11 @@ contract ERC1155 is ERC1155Base, ERC2981, Ownable {
         _setRoyalties(recipient, bps);
     }
 
+    function uri(uint256 id) public view override returns (string memory) {
+        if (bytes(_tokenURIs[id]).length != 0) {
+            return _tokenURIs[id];
+        } else {
+            revert URINotSet();
+        }
+    }
 }

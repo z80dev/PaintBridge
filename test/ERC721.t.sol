@@ -30,7 +30,7 @@ contract ERC721Test is Test {
         nft.mint(attacker, 2);
 
         // deployer can grant minting rights
-        nft.setCanMint(attacker);
+        nft.setCanMint(attacker, true);
         vm.prank(attacker);
         nft.mint(attacker, 2);
 

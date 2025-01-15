@@ -31,7 +31,7 @@ contract ERC1155Test is Test {
         nft.renounceMintingRights();
 
         // deployer can grant minting rights
-        nft.setCanMint(attacker);
+        nft.setCanMint(attacker, true);
         vm.prank(attacker);
         nft.mint(attacker, 2, 1, "");
 
