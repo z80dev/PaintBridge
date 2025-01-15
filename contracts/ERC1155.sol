@@ -22,7 +22,6 @@ contract ERC1155 is ERC1155Base, ERC2981, Ownable {
 
     constructor(address originalAddress, address royaltyRecipient, uint256 royaltyBps) ERC2981(royaltyRecipient, royaltyBps) Ownable(msg.sender) {
         originalCollectionAddress = originalAddress;
-        _minters[msg.sender] = true;
     }
 
     function setCanMint(address newMinter) external onlyOwner {
@@ -30,8 +29,7 @@ contract ERC1155 is ERC1155Base, ERC2981, Ownable {
         emit MintRightsGranted(newMinter);
     }
 
-    function closeMinting() external {
-        require(_minters[msg.sender], "ERC721: FORBIDDEN");
+    function closeMinting() external onlyOwner {
         mintingEnabled = false;
     }
 

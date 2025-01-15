@@ -118,6 +118,7 @@ contract NFTBridgeControl is LZControl {
         originalAddressForBridged[newCollection] = originalAddress;
         blockNumberBridged[originalAddress] = block.number;
         originalOwnerForCollection[newCollection] = originalOwner;
+        ERC721(newCollection).setCanMint(address(this));
         return newCollection;
     }
 
@@ -137,6 +138,7 @@ contract NFTBridgeControl is LZControl {
         originalAddressForBridged[newCollection] = originalAddress;
         blockNumberBridged[originalAddress] = block.number;
         originalOwnerForCollection[newCollection] = originalOwner;
+        ERC1155(newCollection).setCanMint(address(this));
         return newCollection;
     }
 
