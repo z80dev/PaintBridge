@@ -24,9 +24,8 @@ def target_chain_context(func):
 
 def source_chain_context(func):
     def wrapper(*args, **kwargs):
-        if flask_env == "development":
-            with networks.fantom.opera.use_provider("alchemy"):
-                return func(*args, **kwargs)
+        with networks.fantom.opera.use_provider("alchemy"):
+            return func(*args, **kwargs)
 
     return wrapper
 

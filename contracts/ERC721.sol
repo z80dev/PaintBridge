@@ -80,6 +80,10 @@ contract ERC721 is ERC721Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
         }
     }
 
+    function setRoyalties(address recipient, uint256 bps) external onlyOwner {
+        _setRoyalties(recipient, bps);
+    }
+
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool result) {
         /// @solidity memory-safe-assembly
         assembly {
@@ -90,7 +94,4 @@ contract ERC721 is ERC721Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
         }
     }
 
-    function setRoyalties(address recipient, uint256 bps) external onlyOwner {
-        _setRoyalties(recipient, bps);
-    }
 }

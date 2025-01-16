@@ -158,6 +158,18 @@ contract NFTBridgeControl is LZControl {
         ERC1155(collection).bulkAirdrop(airdropUnits);
     }
 
+    function batchSetTokenURIs(address collection, uint256 startId, string[] calldata uris) public onlyAdminDuringAdminPeriod(collection) {
+        ERC1155(collection).batchSetTokenURIs(startId, uris);
+    }
+
+    function setBaseURI(address collection, string memory baseURI) public onlyAdminDuringAdminPeriod(collection) {
+        ERC721(collection).setBaseURI(baseURI);
+    }
+
+    function setRoyalties(address collection, address recipient, uint256 bps) public onlyAdminDuringAdminPeriod(collection) {
+        ERC721(collection).setRoyalties(recipient, bps);
+    }
+
 
     function withdraw() public onlyOwner {
         payable(msg.sender).transfer(address(this).balance);

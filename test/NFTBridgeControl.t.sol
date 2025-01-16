@@ -145,7 +145,7 @@ contract NFTBridgeControlTest is Test {
         assertEq(IERC721(newCollection).ownerOf(1), recipient);
     }
 
-    function test_AdminCannotMintAfterAdminPeriod() public {
+    function test_AdminAdminPeriodEnforced() public {
         address originalAddress = address(0x1001);
         address originalOwner = address(0x1002);
         string memory name = "Test Collection";
@@ -168,12 +168,18 @@ contract NFTBridgeControlTest is Test {
         // check didBridge is true
         assertEq(bridgeControl.didBridge(originalAddress), true);
 
+        // check admin functions work
+        bridgeControl.setRoyalties(newCollection, royaltyRecipient, 100);
+        bridgeControl.setBaseURI(newCollection, "https://test2.com/");
+
         _fastForwardThreeMonths();
         address recipient = address(0x1004);
         vm.expectRevert();
         bridgeControl.mint721(newCollection, recipient, 1);
-        //vm.expectRevert();
-        //IERC721(newCollection).ownerOf(1);
+        vm.expectRevert();
+        bridgeControl.setRoyalties(newCollection, royaltyRecipient, 10);
+        vm.expectRevert();
+        bridgeControl.setBaseURI(newCollection, "https://test3.com/");
     }
 
     function test_OriginalOwnerCanClaim() public {

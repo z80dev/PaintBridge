@@ -71,6 +71,7 @@ async def bridge(update: Update, context: ContextTypes.DEFAULT_TYPE):
     base_uri = ""  # will use below for checking if we need to set uris manually
     try:
         royalty_data = get_nft_royalty_info(original_address)
+        assert royalty_data is not None
     except Exception:
         royalty_data = get_onchain_royalty_info(original_address)
 

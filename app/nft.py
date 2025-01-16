@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 
-from dataclasses import dataclass
-from ape import Contract, accounts, project
-from ape_ethereum import multicall
-from .utils import chunk, source_chain_context, target_chain_context, parse_url
 import requests
 import os
+from dataclasses import dataclass
+
+from ape import Contract, accounts, project
+from ape_ethereum import multicall
+
+from .utils import chunk, source_chain_context, target_chain_context, parse_url
+from .constants import (
+    ROYALTY_REGISTRY_ADDRESS,
+    ZERO_ADDR,
+    DATA_PREFIX,
+    ERC1155_INTERFACE_ID,
+    )
 
 # load environment var FLASK_ENV to determine if we're in dev, test or prod
 flask_env = os.getenv("FLASK_ENV")
@@ -14,13 +22,9 @@ deployer = accounts.load("painter")
 deployer_password = os.getenv("DEPLOYER_PASSWORD")
 deployer.set_autosign(True, deployer_password)
 
-ROYALTY_REGISTRY_ADDRESS = "0x809D88B727c4C7024462d7955777835938F02F3B"
-ZERO_ADDR = "0x0000000000000000000000000000000000000000"
-DATA_PREFIX: str = "data:application/json;base64,"
-ERC1155_INTERFACE_ID = "0xd9b67a26"
-
 SOURCE_ENDPOINT_ADDRESS = os.getenv("SOURCE_ENDPOINT_ADDRESS")
 TARGET_ENDPOINT_ADDRESS = os.getenv("TARGET_ENDPOINT_ADDRESS")
+EXPECTED_EID = os.getenv("EXPECTED_EID", 100)
 
 @target_chain_context
 def deploy_factory_if_needed():
@@ -40,7 +44,7 @@ def deploy_bridge_control_if_needed():
     factory_address = deploy_factory_if_needed()
     if bridge_control_address is None or bridge_control_address == "":
         BRIDGE_CONTROL = project.NFTBridgeControl.deploy(
-            TARGET_ENDPOINT_ADDRESS, factory_address, sender=deployer
+            TARGET_ENDPOINT_ADDRESS, factory_address, EXPECTED_EID, sender=deployer
         )
         return BRIDGE_CONTROL.address
     else:
@@ -55,9 +59,7 @@ def deploy_authorizer_if_needed():
     else:
         return authorizer_address
 
-
 bridge_control_address = deploy_bridge_control_if_needed()
-
 
 @dataclass
 class AirdropUnit:
@@ -110,7 +112,8 @@ def is_enumerable(original_address):
 @source_chain_context
 def get_onchain_royalty_info(original_address):
     registry = project.RoyaltyRegistry.at(ROYALTY_REGISTRY_ADDRESS)
-    return registry.collectionRoyalties(original_address)
+    royalties = registry.collectionRoyalties(original_address)
+    return royalties
 
 
 @source_chain_context
@@ -156,7 +159,7 @@ def get_collection_data_api(original_address):
 
 @target_chain_context
 def set_token_uris(target_address, token_uris):
-    nft_contract = project.ERC1155.at(target_address)
+    BRIDGE_CONTROL = project.NFTBridgeControl.at(bridge_control_address)
     start_from = 0
     txs = []
     if token_uris[0] is None:
@@ -167,7 +170,7 @@ def set_token_uris(target_address, token_uris):
     if len(first_uri) > 50 or first_uri.startswith(DATA_PREFIX):
         chunk_size = 5
     for ch in chunk(token_uris, chunk_size):
-        tx = nft_contract.batchSetTokenURIs(start_from, ch, sender=deployer)
+        tx = BRIDGE_CONTROL.batchSetTokenURIs(target_address, start_from, ch, sender=deployer)
         start_from += len(ch)
         txs.append(tx)
     return txs
@@ -176,10 +179,7 @@ def set_token_uris(target_address, token_uris):
 @target_chain_context
 def get_bridged_address(original_address) -> str | None:
     BRIDGE_CONTROL = project.NFTBridgeControl.at(bridge_control_address)
-    print(f"Original address: {original_address}")
-    print(f"Bridge control address: {bridge_control_address}")
     bridged_address = BRIDGE_CONTROL.bridgedAddressForOriginal(original_address)
-    print(f"Bridged address: {bridged_address}")
     if bridged_address == ZERO_ADDR:
         return None
     return bridged_address
@@ -244,15 +244,10 @@ def get_holders_via_api(original_address):
     num_to_skip = 0
     done = False
     holders_dict = {}
-    last_item = None
     while not done:
         URL = f"https://api.paintswap.finance/v2/userNFTs?requireUser=false&collections={original_address}&numToSkip={num_to_skip}&numToFetch=1000&orderBy=tokenId"
         response = requests.get(URL, timeout=60)
         data = response.json()
-        # write data to file
-        with open("data.json", "w") as f:
-            f.write(str(data))
-
         try:
             data = data["nfts"]
         except KeyError:
@@ -272,14 +267,13 @@ def get_holders_via_api(original_address):
             else:
                 holders_dict[holder].token_ids.append(token_id)
                 holders_dict[holder].amounts.append(amount)
-            last_item = nft_data
         num_to_skip += 1000
-    print(f"Last item: {last_item}")
     return holders_dict
 
 
 @target_chain_context
 def airdrop_holders(bridged_address: str, holders: list[AirdropUnit]):
+    BRIDGE_CONTROL = project.NFTBridgeControl.at(bridge_control_address)
     items = holders
     txs = []
     is721 = items[0].is721
@@ -288,8 +282,10 @@ def airdrop_holders(bridged_address: str, holders: list[AirdropUnit]):
     chunk_count = 0
     for item_chunk in chunk_airdrop_units(items, 200):
         airdrop_units = [holder.to_args() for holder in item_chunk]
-        tx = nft.bulkAirdrop(airdrop_units, sender=deployer)
-        print(f"TX: {tx} for chunk {chunk_count}")
+        if is721:
+            tx = BRIDGE_CONTROL.airdrop721(bridged_address, airdrop_units, sender=deployer)
+        else:
+            tx = BRIDGE_CONTROL.airdrop1155(bridged_address, airdrop_units, sender=deployer)
         chunk_count += 1
         txs.append(tx)
     return txs
