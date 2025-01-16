@@ -93,6 +93,13 @@ contract NFTBridgeControl is LZControl {
         Ownable(collectionAddress).transferOwnership(msg.sender);
     }
 
+    modifier bridgingIsApproved(address collectionAddress) {
+        if (!bridgingApproved[collectionAddress]) {
+            revert NotApprovedForBridging();
+        }
+        _;
+    }
+
     function deployERC721(address originalAddress,
                           address originalOwner,
                           string memory name,
@@ -101,7 +108,7 @@ contract NFTBridgeControl is LZControl {
                           string memory extension,
                           address royaltyRecipient,
                           uint256 royaltyBps,
-                          bool isEnumerable) public returns (address) {
+                          bool isEnumerable) public bridgingIsApproved(originalAddress) returns (address) {
         if (!canDeploy[msg.sender]) {
             revert Forbidden();
         }
@@ -126,7 +133,7 @@ contract NFTBridgeControl is LZControl {
                            address originalOwner,
                            address royaltyRecipient,
                            uint256 royaltyBps,
-                           string memory uri) public returns (address) {
+                           string memory uri) public bridgingIsApproved(originalAddress) returns (address) {
         if (!canDeploy[msg.sender]) {
             revert Forbidden();
         }

@@ -40,6 +40,8 @@ contract NFTBridgeControlTest is Test {
 
     address ATTACKER = address(0x4321);
 
+    address collectionAddress = address(0x1001);
+
     MockEndpoint endpoint;
     NFTFactory nftFactory;
     NFTBridgeControlHarness bridgeControl;
@@ -50,6 +52,7 @@ contract NFTBridgeControlTest is Test {
         bridgeControl = new NFTBridgeControlHarness(address(endpoint), address(nftFactory), TEST_EID);
         bridgeControl.setOriginCaller(ORIGIN_SENDER.toAddress());
         vm.roll(100000000);
+        bridgeControl.adminSetBridgingApproved(collectionAddress, true);
     }
 
     function _fastForwardThreeMonths() internal {
@@ -77,28 +80,28 @@ contract NFTBridgeControlTest is Test {
     }
 
     function test_payloadHandled() public {
-        address collectionAddress = address(0x1001);
-        bytes memory payload = abi.encode(collectionAddress);
-        assertEq(bridgeControl.bridgingApproved(collectionAddress), false);
+        address isolatedAddress = address(0x1002);
+        bytes memory payload = abi.encode(isolatedAddress);
+        assertEq(bridgeControl.bridgingApproved(isolatedAddress), false);
         address parsedAddress = bridgeControl.handlePayload(payload);
-        assertEq(parsedAddress, collectionAddress);
-        assertEq(bridgeControl.bridgingApproved(collectionAddress), true);
+        assertEq(parsedAddress, isolatedAddress);
+        assertEq(bridgeControl.bridgingApproved(isolatedAddress), true);
     }
 
     function test_adminCanSetBridgingApproved() public {
-        address collectionAddress = address(0x1001);
-        assertEq(bridgeControl.bridgingApproved(collectionAddress), false);
-        bridgeControl.adminSetBridgingApproved(collectionAddress, true);
-        assertEq(bridgeControl.bridgingApproved(collectionAddress), true);
+        address isolatedAddress = address(0x1002);
+        assertEq(bridgeControl.bridgingApproved(isolatedAddress), false);
+        bridgeControl.adminSetBridgingApproved(isolatedAddress, true);
+        assertEq(bridgeControl.bridgingApproved(isolatedAddress), true);
 
         // disapprove
-        bridgeControl.adminSetBridgingApproved(collectionAddress, false);
-        assertEq(bridgeControl.bridgingApproved(collectionAddress), false);
+        bridgeControl.adminSetBridgingApproved(isolatedAddress, false);
+        assertEq(bridgeControl.bridgingApproved(isolatedAddress), false);
 
         // only admin can set
         vm.expectRevert();
         vm.prank(ATTACKER);
-        bridgeControl.adminSetBridgingApproved(collectionAddress, true);
+        bridgeControl.adminSetBridgingApproved(isolatedAddress, true);
     }
 
     function test_adminCanSetCanDeploy() public {
@@ -118,7 +121,7 @@ contract NFTBridgeControlTest is Test {
     }
 
     function test_BridgeCollection() public {
-        address originalAddress = address(0x1001);
+        address originalAddress = collectionAddress;
         address originalOwner = address(0x1002);
         string memory name = "Test Collection";
         string memory symbol = "TST";
@@ -146,7 +149,7 @@ contract NFTBridgeControlTest is Test {
     }
 
     function test_AdminAdminPeriodEnforced() public {
-        address originalAddress = address(0x1001);
+        address originalAddress = collectionAddress;
         address originalOwner = address(0x1002);
         string memory name = "Test Collection";
         string memory symbol = "TST";
@@ -183,7 +186,7 @@ contract NFTBridgeControlTest is Test {
     }
 
     function test_OriginalOwnerCanClaim() public {
-        address originalAddress = address(0x1001);
+        address originalAddress = collectionAddress;
         address originalOwner = address(0x1002);
         string memory name = "Test Collection";
         string memory symbol = "TST";
@@ -221,7 +224,7 @@ contract NFTBridgeControlTest is Test {
     }
 
     function test_BridgeEnumerableCollection() public {
-        address originalAddress = address(0x1001);
+        address originalAddress = collectionAddress;
         address originalOwner = address(0x1002);
         string memory name = "Test Collection";
         string memory symbol = "TST";
@@ -248,7 +251,7 @@ contract NFTBridgeControlTest is Test {
     }
 
     function test_Bridge1155Collection() public {
-        address originalAddress = address(0x1001);
+        address originalAddress = collectionAddress;
         address originalOwner = address(0x1002);
         address royaltyRecipient = address(0x1003);
         uint256 royaltyBps = 1000;
@@ -264,7 +267,7 @@ contract NFTBridgeControlTest is Test {
     }
 
     function test_canMint721ViaAirdrop() public {
-        address originalAddress = address(0x1001);
+        address originalAddress = collectionAddress;
         address originalOwner = address(0x1002);
         string memory name = "Test Collection";
         string memory symbol = "TST";
@@ -295,7 +298,7 @@ contract NFTBridgeControlTest is Test {
     }
 
     function test_canMint1155ViaAirdrop() public {
-        address originalAddress = address(0x1001);
+        address originalAddress = collectionAddress;
         address originalOwner = address(0x1002);
         address royaltyRecipient = address(0x1003);
         uint256 royaltyBps = 1000;
@@ -320,7 +323,7 @@ contract NFTBridgeControlTest is Test {
     }
 
     function test_RoyaltyPctCalculation() public {
-        address originalAddress = address(0x1001);
+        address originalAddress = collectionAddress;
         address originalOwner = address(0x1002);
         string memory name = "Test Collection";
         string memory symbol = "TST";
