@@ -86,7 +86,7 @@ class NFTBridge:
     @target_chain_context
     def _deploy_bridge_control(self, expected_eid) -> str:
         """Deploy or return existing bridge control contract."""
-        bridge_control = project.NFTBridgeControl.deploy(
+        bridge_control = project.SCCNFTBridge.deploy(
             self.target_endpoint,
             self.factory_address,
             expected_eid,
@@ -191,7 +191,7 @@ class NFTBridge:
     @target_chain_context
     def set_token_uris(self, target_address: str, token_uris: List[str]) -> List:
         """Set token URIs for the bridged contract."""
-        bridge_control = project.NFTBridgeControl.at(self.bridge_control_address)
+        bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
         start_from = 0
         txs = []
 
@@ -218,7 +218,7 @@ class NFTBridge:
     @target_chain_context
     def get_bridged_address(self, original_address: str) -> Optional[str]:
         """Get the bridged contract address for an original contract."""
-        bridge_control = project.NFTBridgeControl.at(self.bridge_control_address)
+        bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
         bridged_address = bridge_control.bridgedAddressForOriginal(original_address)
         return None if bridged_address == ZERO_ADDR else bridged_address
 
@@ -231,7 +231,7 @@ class NFTBridge:
         royalty_bps: int
     ):
         """Deploy a bridged ERC1155 contract."""
-        bridge_control = project.NFTBridgeControl.at(self.bridge_control_address)
+        bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
         return bridge_control.deployERC1155(
             original_address,
             original_owner,
@@ -262,7 +262,7 @@ class NFTBridge:
         bps: int
     ):
         """Deploy a bridged ERC721 contract."""
-        bridge_control = project.NFTBridgeControl.at(self.bridge_control_address)
+        bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
         enumerable = self.is_enumerable(original_address)
         return bridge_control.deployERC721(
             original_address,
@@ -339,7 +339,7 @@ class NFTBridge:
     @target_chain_context
     def airdrop_holders(self, bridged_address: str, holders: List[AirdropUnit]) -> List:
         """Airdrop tokens to holders."""
-        bridge_control = project.NFTBridgeControl.at(self.bridge_control_address)
+        bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
         is721 = holders[0].is721
         txs = []
 

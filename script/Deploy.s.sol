@@ -3,7 +3,8 @@ pragma solidity >=0.8.7 <0.9.0;
 
 import {Script} from "forge-std/Script.sol";
 import {NFTFactory} from "../contracts/NFTFactory.sol";
-import {NFTBridgeControl} from "../contracts/NFTBridgeControl.sol";
+import {SCCNFTBridge} from "../contracts/SCCNFTBridge.sol";
+import {console} from "forge-std/console.sol";
 
 contract DeployScript is Script {
     address constant ENDPOINT = address(0x6F475642a6e85809B1c36Fa62763669b1b48DD5B); // Endpoint on Sonic
@@ -15,8 +16,8 @@ contract DeployScript is Script {
         // Deploy NFTFactory first
         NFTFactory nftFactory = new NFTFactory();
 
-        // Deploy NFTBridgeControl with the factory
-        NFTBridgeControl bridgeControl = new NFTBridgeControl(
+        // Deploy SCCNFTBridge with the factory
+        SCCNFTBridge bridgeControl = new SCCNFTBridge(
             ENDPOINT,
             address(nftFactory),
             SOURCE_EID
@@ -26,6 +27,6 @@ contract DeployScript is Script {
 
         // Log the deployed addresses
         console.log("NFTFactory deployed to:", address(nftFactory));
-        console.log("NFTBridgeControl deployed to:", address(bridgeControl));
+        console.log("SCCNFTBridge deployed to:", address(bridgeControl));
     }
 }

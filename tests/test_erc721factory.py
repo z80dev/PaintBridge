@@ -19,7 +19,7 @@ def factory(project, deployer):
 
 @pytest.fixture
 def bridge_control(project, deployer, mock_endpoint, factory):
-    return project.NFTBridgeControl.deploy(mock_endpoint, factory, DUMMY_EID, sender=deployer)
+    return project.SCCNFTBridge.deploy(mock_endpoint, factory, DUMMY_EID, sender=deployer)
 
 
 def test_factory_deploy(factory):

@@ -3,6 +3,7 @@ pragma solidity >=0.8.7 <0.9.0;
 
 import {Script} from "forge-std/Script.sol";
 import {OriginAuthorizer} from "../contracts/OriginAuthorizer.sol";
+import {console} from "forge-std/console.sol";
 
 contract DeployOriginAuthorizer is Script {
     address constant ENDPOINT = address(0x1a44076050125825900e736c501f859c50fE728c); // Endpoint on Fantom

@@ -11,12 +11,12 @@ contract SetDestinationFactory is Script {
         );
 
         address destinationFactory = vm.parseAddress(
-            vm.prompt("Enter destination NFTBridgeControl contract address: ")
+            vm.prompt("Enter destination SCCNFTBridge contract address: ")
         );
 
         vm.startBroadcast();
 
-        OriginAuthorizer authorizer = OriginAuthorizer(originAuthorizer);
+        OriginAuthorizer authorizer = OriginAuthorizer(payable(originAuthorizer));
         authorizer.setDestinationFactoryAddress(destinationFactory);
 
         vm.stopBroadcast();

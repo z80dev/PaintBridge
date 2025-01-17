@@ -5,8 +5,8 @@ pragma solidity >=0.8.7 <0.9.0;
 import {Test, console} from "forge-std/Test.sol";
 import {MockEndpoint} from "../contracts/MockEndpoint.sol";
 import {NFTFactory} from "../contracts/NFTFactory.sol";
-import {NFTBridgeControl} from "../contracts/NFTBridgeControl.sol";
-import {NFTBridgeControlHarness} from "./NFTBridgeControlHarness.sol";
+import {SCCNFTBridge} from "../contracts/SCCNFTBridge.sol";
+import {SCCNFTBridgeHarness} from "./SCCNFTBridgeHarness.sol";
 
 import {IERC721Enumerable} from "../contracts/interfaces/IERC721Enumerable.sol";
 import {IERC721} from "../contracts/interfaces/IERC721.sol";
@@ -31,7 +31,7 @@ library Byte32AddressUtil {
     }
 }
 
-contract NFTBridgeControlTest is Test {
+contract SCCNFTBridgeTest is Test {
     using AddressByteUtil for address;
     using Byte32AddressUtil for bytes32;
 
@@ -44,12 +44,12 @@ contract NFTBridgeControlTest is Test {
 
     MockEndpoint endpoint;
     NFTFactory nftFactory;
-    NFTBridgeControlHarness bridgeControl;
+    SCCNFTBridgeHarness bridgeControl;
 
     function setUp() public {
         endpoint = new MockEndpoint();
         nftFactory = new NFTFactory();
-        bridgeControl = new NFTBridgeControlHarness(address(endpoint), address(nftFactory), TEST_EID);
+        bridgeControl = new SCCNFTBridgeHarness(address(endpoint), address(nftFactory), TEST_EID);
         bridgeControl.setOriginCaller(ORIGIN_SENDER.toAddress());
         vm.roll(100000000);
         bridgeControl.adminSetBridgingApproved(collectionAddress, true);

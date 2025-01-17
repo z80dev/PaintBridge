@@ -12,7 +12,7 @@ import { Byte32AddressUtil } from "./utils/Utils.sol";
 import { ERC721 } from "./ERC721.sol";
 import { ERC1155 } from "./ERC1155.sol";
 
-contract NFTBridgeControl is LZControl {
+contract SCCNFTBridge is LZControl {
 
     using Byte32AddressUtil for bytes32;
 

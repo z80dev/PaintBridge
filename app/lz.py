@@ -67,7 +67,7 @@ def main():
 
     with target_context:
         factory = project.NFTFactory.deploy(sender=deployer)
-        bridge_control = project.NFTBridgeControl.deploy(SONIC_TESTNET_ENDPOINT, factory, sender=deployer)
+        bridge_control = project.SCCNFTBridge.deploy(SONIC_TESTNET_ENDPOINT, factory, sender=deployer)
         print("NFT Factory deployed at", factory.address)
         print("Bridge Control deployed at", bridge_control.address)
 

@@ -2,11 +2,11 @@
 
 pragma solidity >=0.8.7 <0.9.0;
 
-import {NFTBridgeControl} from "../contracts/NFTBridgeControl.sol";
+import {SCCNFTBridge} from "../contracts/SCCNFTBridge.sol";
 import {Origin} from "../contracts/MyOApp.sol";
 
-contract NFTBridgeControlHarness is NFTBridgeControl {
-    constructor(address endpoint, address factory, uint32 expectedEID) NFTBridgeControl(endpoint, factory, expectedEID)
+contract SCCNFTBridgeHarness is SCCNFTBridge {
+    constructor(address endpoint, address factory, uint32 expectedEID) SCCNFTBridge(endpoint, factory, expectedEID)
     {}
 
 

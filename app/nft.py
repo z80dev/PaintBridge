@@ -43,7 +43,7 @@ def deploy_bridge_control_if_needed():
     bridge_control_address = os.getenv("BRIDGE_CONTROL_ADDRESS")
     factory_address = deploy_factory_if_needed()
     if bridge_control_address is None or bridge_control_address == "":
-        BRIDGE_CONTROL = project.NFTBridgeControl.deploy(
+        BRIDGE_CONTROL = project.SCCNFTBridge.deploy(
             TARGET_ENDPOINT_ADDRESS, factory_address, EXPECTED_EID, sender=deployer
         )
         return BRIDGE_CONTROL.address
@@ -159,7 +159,7 @@ def get_collection_data_api(original_address):
 
 @target_chain_context
 def set_token_uris(target_address, token_uris):
-    BRIDGE_CONTROL = project.NFTBridgeControl.at(bridge_control_address)
+    BRIDGE_CONTROL = project.SCCNFTBridge.at(bridge_control_address)
     start_from = 0
     txs = []
     if token_uris[0] is None:
@@ -178,7 +178,7 @@ def set_token_uris(target_address, token_uris):
 
 @target_chain_context
 def get_bridged_address(original_address) -> str | None:
-    BRIDGE_CONTROL = project.NFTBridgeControl.at(bridge_control_address)
+    BRIDGE_CONTROL = project.SCCNFTBridge.at(bridge_control_address)
     bridged_address = BRIDGE_CONTROL.bridgedAddressForOriginal(original_address)
     if bridged_address == ZERO_ADDR:
         return None
@@ -187,7 +187,7 @@ def get_bridged_address(original_address) -> str | None:
 
 @target_chain_context
 def deploy_1155(original_address, original_owner, royaltyRecipient, royaltyBPS):
-    BRIDGE_CONTROL = project.NFTBridgeControl.at(bridge_control_address)
+    BRIDGE_CONTROL = project.SCCNFTBridge.at(bridge_control_address)
     tx = BRIDGE_CONTROL.deployERC1155(
         original_address, original_owner, royaltyRecipient, royaltyBPS, sender=deployer
     )
@@ -207,7 +207,7 @@ def get_collection_owner(original_address):
 def deploy_721(
         original_address, original_owner, name, symbol, base_uri, extension, recipient, bps
 ):
-    BRIDGE_CONTROL = project.NFTBridgeControl.at(bridge_control_address)
+    BRIDGE_CONTROL = project.SCCNFTBridge.at(bridge_control_address)
     enumerable = is_enumerable(original_address)
     tx = BRIDGE_CONTROL.deployERC721(
         original_address,
@@ -273,7 +273,7 @@ def get_holders_via_api(original_address):
 
 @target_chain_context
 def airdrop_holders(bridged_address: str, holders: list[AirdropUnit]):
-    BRIDGE_CONTROL = project.NFTBridgeControl.at(bridge_control_address)
+    BRIDGE_CONTROL = project.SCCNFTBridge.at(bridge_control_address)
     items = holders
     txs = []
     is721 = items[0].is721
