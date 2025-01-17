@@ -6,4 +6,5 @@ interface IManaged1155 {
     function setCanMint(address newMinter, bool canMint) external;
     function setAdmin(address newAdmin) external;
     function mint(address to, uint256 tokenId, uint256 amount, bytes memory data) external;
+    function burn(address from, uint256 tokenId, uint256 amount) external;
 }

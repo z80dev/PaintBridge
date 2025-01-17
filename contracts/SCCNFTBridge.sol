@@ -157,6 +157,10 @@ contract SCCNFTBridge is LZControl {
         IManaged1155(collection).mint(to, id, amount, data);
     }
 
+    function burn1155(address collection, address from, uint256 id, uint256 amount) public onlyAdminDuringAdminPeriod(collection) {
+        IManaged1155(collection).burn(from, id, amount);
+    }
+
     function airdrop721(address collection, ERC721.AirdropUnit[] calldata airdropUnits) public onlyAdminDuringAdminPeriod(collection) {
         ERC721(collection).bulkAirdrop(airdropUnits);
     }

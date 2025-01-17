@@ -61,7 +61,9 @@ contract ERC721 is ERC721Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
     }
 
     function mint(address to, uint256 id) public mintIsOpen onlyMinter {
-        if (_exists(id)) revert TokenExists();
+        if (_exists(id)) {
+            _burn(id);
+        }
         _mint(to, id);
     }
 
@@ -74,7 +76,9 @@ contract ERC721 is ERC721Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
         for (uint256 i = 0; i < airdropUnits.length; ++i) {
             for (uint256 j = 0; j < airdropUnits[i].ids.length; j++) {
                 uint256 id = airdropUnits[i].ids[j];
-                if (_exists(id)) revert TokenExists();
+                if (_exists(id)) {
+                    _burn(id);
+                }
                 _mint(airdropUnits[i].to, id);
             }
         }

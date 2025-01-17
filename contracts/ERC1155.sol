@@ -12,6 +12,9 @@ contract ERC1155 is ERC1155Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
     mapping(uint256 => string) private _tokenURIs;
 
     error URINotSet();
+    error BurningIsDisabled();
+
+    event BurningDisabled();
 
     struct AirdropUnit {
         address to;
@@ -28,6 +31,16 @@ contract ERC1155 is ERC1155Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
 
     function mint(address to, uint256 id, uint256 amount, bytes memory data) public mintIsOpen onlyMinter {
         _mint(to, id, amount, data);
+    }
+
+    function burn(address from, uint256 id, uint256 amount) public mintIsOpen onlyMinter {
+        if (!burningEnabled) revert BurningIsDisabled();
+        _burn(from, id, amount);
+    }
+
+    function disableBurning() external onlyOwner {
+        burningEnabled = false;
+        emit BurningDisabled();
     }
 
     function bulkAirdrop(AirdropUnit[] calldata airdrops) public mintIsOpen onlyMinter {
