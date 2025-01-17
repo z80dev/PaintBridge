@@ -9,6 +9,8 @@ from ape.logging import logger as ape_logger, LogLevel
 
 from .nft import airdrop_holders, deploy_1155, deploy_721, get_bridged_address, get_collection_data, get_collection_data_api, get_collection_owner, get_holders_via_api, get_nft_royalty_info, get_onchain_royalty_info, get_token_uris, set_token_uris
 
+from .nft_bridge import NFTBridge
+
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
