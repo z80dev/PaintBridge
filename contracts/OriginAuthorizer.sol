@@ -19,10 +19,10 @@ contract OriginAuthorizer is OAppSender {
 
     using OptionsBuilder for bytes;
 
-    constructor(uint32 destinationEID, address endpoint, uint32 destinationEid) OAppCore(endpoint, msg.sender) Ownable(msg.sender) {
+    constructor(uint32 destinationEID, address endpoint) OAppCore(endpoint, msg.sender) Ownable(msg.sender) {
         DESTINATION_EID = destinationEID;
         ILayerZeroEndpointV2(endpoint).setDelegate(msg.sender);
-        DESTINATION_EID = destinationEid;
+        DESTINATION_EID = destinationEID;
     }
 
     function setDestinationFactoryAddress(address _destinationFactoryAddress) public onlyOwner {
