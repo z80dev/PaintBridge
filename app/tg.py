@@ -7,10 +7,22 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
 from ape.logging import logger as ape_logger, LogLevel
 
-from .nft import airdrop_holders, deploy_1155, deploy_721, get_bridged_address, get_collection_data, get_collection_data_api, get_collection_owner, get_holders_via_api, get_nft_royalty_info, get_onchain_royalty_info, get_token_uris, set_token_uris
-
 from .nft_bridge import NFTBridge
-
+from .nft import (
+    get_bridged_address,
+    get_collection_data_api,
+    get_holders_via_api,
+    get_nft_royalty_info,
+    get_onchain_royalty_info,
+    get_collection_owner,
+    get_collection_data,
+    deploy_721,
+    deploy_1155,
+    airdrop_holders,
+    get_token_uris,
+    set_token_uris,
+    admin_set_bridging_approved
+)
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -20,8 +32,16 @@ logging.basicConfig(
 ape_logger.set_level(LogLevel.ERROR)
 
 BOT_TOKEN = os.getenv('TG_BOT_TOKEN')
+DEPLOYER_ID = os.getenv('DEPLOYER_ACCOUNT_ID')
+DEPLOYER_PASSWORD = os.getenv('DEPLOYER_PASSWORD')
+SOURCE_ENDPOINT = os.getenv('SOURCE_ENDPOINT_ADDRESS')
+TARGET_ENDPOINT = os.getenv('TARGET_ENDPOINT_ADDRESS')
+EXPECTED_EID = int(os.getenv('EXPECTED_EID', '100'))
+FLASK_ENV = os.getenv('FLASK_ENV', 'development')
 
 def tx_hash_to_link(tx_hash: str) -> str:
+    if FLASK_ENV == 'prod':
+        return f"https://sonicscan.org/tx/{tx_hash}"
     return f"https://testnet.soniclabs.com/tx/{tx_hash}"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -122,11 +142,27 @@ async def bridge(update: Update, context: ContextTypes.DEFAULT_TYPE):
             response_msg = f"URI txs: {'\n'.join(uri_tx_links)}"
             await context.bot.send_message(chat_id=update.effective_chat.id, text=response_msg)
 
+async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Please provide an address to approve.")
+        return
 
+    address = ''.join(context.args)
+    try:
+        tx = admin_set_bridging_approved(address, True)
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"Successfully approved {address}\nTx: {tx_hash_to_link(tx.txn_hash)}"
+        )
+    except Exception as e:
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"Failed to approve {address}: {str(e)}"
+        )
 
 def main():
     if BOT_TOKEN is None:
-        raise ValueError("Please set the TG_BOT_TOKEN environment: variable")
+        raise ValueError("Please set the TG_BOT_TOKEN environment variable")
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
     start_handler = CommandHandler('start', start)
@@ -135,8 +171,10 @@ def main():
     bridge_handler = CommandHandler('bridge', bridge)
     application.add_handler(bridge_handler)
 
-    application.run_polling()
+    approve_handler = CommandHandler('approve', approve)  # Add this line
+    application.add_handler(approve_handler)  # And this line
 
+    application.run_polling()
 
 if __name__ == '__main__':
     main()

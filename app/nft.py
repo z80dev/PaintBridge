@@ -289,3 +289,24 @@ def airdrop_holders(bridged_address: str, holders: list[AirdropUnit]):
         chunk_count += 1
         txs.append(tx)
     return txs
+
+# write a function for calling the admin authorize function on SCCNFTbridge in this project
+@target_chain_context
+def admin_set_bridging_approved(collection_address: str, approved: bool):
+    """
+    Calls adminSetBridgingApproved on the bridge contract to approve/disapprove bridging for a collection
+
+    Args:
+        collection_address: Address of the collection to approve/disapprove
+        approved: Boolean indicating if bridging should be approved or not
+
+    Returns:
+        Transaction receipt
+    """
+    BRIDGE_CONTROL = project.SCCNFTBridge.at(bridge_control_address)
+    tx = BRIDGE_CONTROL.adminSetBridgingApproved(
+        collection_address,
+        approved,
+        sender=deployer
+    )
+    return tx
