@@ -10,6 +10,7 @@ import {BridgedNFT} from "./BridgedNFT.sol";
 contract ERC1155 is ERC1155Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
     // tokenURI overrides everything
     mapping(uint256 => string) private _tokenURIs;
+    bool public burningEnabled = true;
 
     error URINotSet();
     error BurningIsDisabled();
