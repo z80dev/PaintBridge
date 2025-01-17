@@ -14,10 +14,7 @@ contract DeployOriginAuthorizer is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // Deploy OriginAuthorizer
-        OriginAuthorizer authorizer = new OriginAuthorizer(
-            DESTINATION_EID,
-            ENDPOINT
-        );
+        OriginAuthorizer authorizer = new OriginAuthorizer(DESTINATION_EID, ENDPOINT);
 
         vm.stopBroadcast();
 

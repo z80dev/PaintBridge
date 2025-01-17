@@ -17,11 +17,7 @@ contract DeployScript is Script {
         NFTFactory nftFactory = new NFTFactory();
 
         // Deploy SCCNFTBridge with the factory
-        SCCNFTBridge bridgeControl = new SCCNFTBridge(
-            ENDPOINT,
-            address(nftFactory),
-            SOURCE_EID
-        );
+        SCCNFTBridge bridgeControl = new SCCNFTBridge(ENDPOINT, address(nftFactory), SOURCE_EID);
 
         vm.stopBroadcast();
 
