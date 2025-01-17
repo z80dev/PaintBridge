@@ -7,8 +7,8 @@ import {console} from "forge-std/console.sol";
 
 contract SetOriginCaller is Script {
     function run() external {
-        address bridgeControl = vm.parseAddress(vm.prompt("Enter SCCNFTBridge address: "));
-        address originCaller = vm.parseAddress(vm.prompt("Enter OriginAuthorizer address: "));
+        address bridgeControl = vm.envAddress("BRIDGE_ADDRESS");
+        address originCaller = vm.envAddress("AUTHORIZER_ADDRESS");
 
         vm.startBroadcast();
 

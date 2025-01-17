@@ -12,11 +12,17 @@ networks:
       chain_id: 57054
       ecosystem: fantom
       base_ecosystem_plugin: ethereum
+    - name: sonic
+      chain_id: 146
+      ecosystem: fantom
+      base_ecosystem_plugin: ethereum
 
 node:
   fantom:
     sonictest:
       uri: https://rpc.blaze.soniclabs.com
+    sonic:
+      uri: https://rpc.soniclabs.com
 
 default_ecosystem: ethereum
 
@@ -28,6 +34,9 @@ ethereum:
 fantom:
   default_network: sonictest
   sonictest:
+    default_provider: node
+    required_confirmations: 2
+  sonic:
     default_provider: node
     required_confirmations: 2
 

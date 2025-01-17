@@ -18,6 +18,9 @@ def target_chain_context(func):
         elif flask_env == "testnet":
             with networks.fantom.sonictest.use_provider("node"):
                 return func(*args, **kwargs)
+        elif flask_env == "prod":
+            with networks.fantom.sonic.use_provider("node"):
+                return func(*args, **kwargs)
 
     return wrapper
 

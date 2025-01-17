@@ -6,9 +6,9 @@ import {OriginAuthorizer} from "../contracts/OriginAuthorizer.sol";
 
 contract SetDestinationFactory is Script {
     function run() external {
-        address originAuthorizer = vm.parseAddress(vm.prompt("Enter OriginAuthorizer contract address: "));
+        address originAuthorizer = vm.envAddress("AUTHORIZER_ADDRESS");
 
-        address destinationFactory = vm.parseAddress(vm.prompt("Enter destination SCCNFTBridge contract address: "));
+        address destinationFactory = vm.envAddress("BRIDGE_ADDRESS");
 
         vm.startBroadcast();
 

@@ -10,8 +10,7 @@ contract DeployOriginAuthorizer is Script {
     uint32 constant DESTINATION_EID = 30332; // Update with actual destination chain EID
 
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        vm.startBroadcast(deployerPrivateKey);
+        vm.startBroadcast();
 
         // Deploy OriginAuthorizer
         OriginAuthorizer authorizer = new OriginAuthorizer(DESTINATION_EID, ENDPOINT);
