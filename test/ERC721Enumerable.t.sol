@@ -3,6 +3,7 @@
 pragma solidity >=0.8.7 <0.9.0;
 
 import {Test, console} from "forge-std/Test.sol";
+import {ERC721} from "../contracts/ERC721.sol";
 import {ERC721Enumerable} from "../contracts/ERC721Enumerable.sol";
 
 contract ERC721EnumerableTest is Test {
@@ -18,22 +19,39 @@ contract ERC721EnumerableTest is Test {
 
     function test_TotalSupply() public {
         assertEq(nft.totalSupply(), 0);
-        nft.mint(address(this), 1);
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = 1;
+        ERC721.AirdropUnit[] memory units = new ERC721.AirdropUnit[](1);
+        units[0] = ERC721.AirdropUnit(address(this), ids);
+        nft.bulkAirdrop(units);
         assertEq(nft.totalSupply(), 1);
-        nft.mint(address(this), 2);
+
+        uint256[] memory ids2 = new uint256[](1);
+        ids2[0] = 2;
+        ERC721.AirdropUnit[] memory units2 = new ERC721.AirdropUnit[](1);
+        units2[0] = ERC721.AirdropUnit(address(this), ids2);
+        nft.bulkAirdrop(units2);
         assertEq(nft.totalSupply(), 2);
     }
 
     function test_tokenByIndex() public {
-        nft.mint(address(this), 1);
-        nft.mint(address(this), 2);
+        uint256[] memory ids = new uint256[](2);
+        ids[0] = 1;
+        ids[1] = 2;
+        ERC721.AirdropUnit[] memory units = new ERC721.AirdropUnit[](1);
+        units[0] = ERC721.AirdropUnit(address(this), ids);
+        nft.bulkAirdrop(units);
         assertEq(nft.tokenByIndex(0), 1);
         assertEq(nft.tokenByIndex(1), 2);
     }
 
     function test_tokenOfOwnerByIndex() public {
-        nft.mint(address(this), 1);
-        nft.mint(address(this), 2);
+        uint256[] memory ids = new uint256[](2);
+        ids[0] = 1;
+        ids[1] = 2;
+        ERC721.AirdropUnit[] memory units = new ERC721.AirdropUnit[](1);
+        units[0] = ERC721.AirdropUnit(address(this), ids);
+        nft.bulkAirdrop(units);
         assertEq(nft.tokenOfOwnerByIndex(address(this), 0), 1);
         assertEq(nft.tokenOfOwnerByIndex(address(this), 1), 2);
 

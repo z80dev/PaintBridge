@@ -2,11 +2,10 @@
 
 pragma solidity >=0.8.7 <0.9.0;
 
-import { OAppReceiver, OAppCore, Ownable, Origin, MessagingFee, ILayerZeroEndpointV2 } from "./MyOApp.sol";
-import { AddressByteUtil, Byte32AddressUtil } from "./utils/Utils.sol";
+import {OAppReceiver, OAppCore, Ownable, Origin, MessagingFee, ILayerZeroEndpointV2} from "./MyOApp.sol";
+import {AddressByteUtil, Byte32AddressUtil} from "./utils/Utils.sol";
 
 abstract contract LZControl is OAppReceiver {
-
     using AddressByteUtil for address;
     using Byte32AddressUtil for bytes32;
 
@@ -49,5 +48,4 @@ abstract contract LZControl is OAppReceiver {
         _validateOrigin(origin);
         _validateGuid(guid);
     }
-
 }

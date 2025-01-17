@@ -58,16 +58,17 @@ interface IMessageLibManager {
 
     function setReceiveLibraryTimeout(address _oapp, uint32 _eid, address _lib, uint256 _expiry) external;
 
-    function receiveLibraryTimeout(address _receiver, uint32 _eid) external view returns (address lib, uint256 expiry);
+    function receiveLibraryTimeout(address _receiver, uint32 _eid)
+        external
+        view
+        returns (address lib, uint256 expiry);
 
     function setConfig(address _oapp, address _lib, SetConfigParam[] calldata _params) external;
 
-    function getConfig(
-        address _oapp,
-        address _lib,
-        uint32 _eid,
-        uint32 _configType
-    ) external view returns (bytes memory config);
+    function getConfig(address _oapp, address _lib, uint32 _eid, uint32 _configType)
+        external
+        view
+        returns (bytes memory config);
 }
 
 // node_modules/@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/IMessagingChannel.sol
@@ -93,12 +94,10 @@ interface IMessagingChannel {
 
     function outboundNonce(address _sender, uint32 _dstEid, bytes32 _receiver) external view returns (uint64);
 
-    function inboundPayloadHash(
-        address _receiver,
-        uint32 _srcEid,
-        bytes32 _sender,
-        uint64 _nonce
-    ) external view returns (bytes32);
+    function inboundPayloadHash(address _receiver, uint32 _srcEid, bytes32 _sender, uint64 _nonce)
+        external
+        view
+        returns (bytes32);
 
     function lazyInboundNonce(address _receiver, uint32 _srcEid, bytes32 _sender) external view returns (uint64);
 }
@@ -121,12 +120,10 @@ interface IMessagingComposer {
         bytes reason
     );
 
-    function composeQueue(
-        address _from,
-        address _to,
-        bytes32 _guid,
-        uint16 _index
-    ) external view returns (bytes32 messageHash);
+    function composeQueue(address _from, address _to, bytes32 _guid, uint16 _index)
+        external
+        view
+        returns (bytes32 messageHash);
 
     function sendCompose(address _to, bytes32 _guid, uint16 _index, bytes calldata _message) external;
 
@@ -454,7 +451,7 @@ library Address {
             revert Errors.InsufficientBalance(address(this).balance, amount);
         }
 
-        (bool success, ) = recipient.call{value: amount}("");
+        (bool success,) = recipient.call{value: amount}("");
         if (!success) {
             revert Errors.FailedCall();
         }
@@ -522,11 +519,11 @@ library Address {
      * was not a contract or bubbling up the revert reason (falling back to {Errors.FailedCall}) in case
      * of an unsuccessful call.
      */
-    function verifyCallResultFromTarget(
-        address target,
-        bool success,
-        bytes memory returndata
-    ) internal view returns (bytes memory) {
+    function verifyCallResultFromTarget(address target, bool success, bytes memory returndata)
+        internal
+        view
+        returns (bytes memory)
+    {
         if (!success) {
             _revert(returndata);
         } else {
@@ -620,10 +617,10 @@ interface ILayerZeroEndpointV2 is IMessageLibManager, IMessagingComposer, IMessa
 
     function quote(MessagingParams calldata _params, address _sender) external view returns (MessagingFee memory);
 
-    function send(
-        MessagingParams calldata _params,
-        address _refundAddress
-    ) external payable returns (MessagingReceipt memory);
+    function send(MessagingParams calldata _params, address _refundAddress)
+        external
+        payable
+        returns (MessagingReceipt memory);
 
     function verify(Origin calldata _origin, address _receiver, bytes32 _payloadHash) external;
 
@@ -712,7 +709,9 @@ interface IERC1363 is IERC20, IERC165 {
      * @param data Additional data with no specified format, sent in call to `to`.
      * @return A boolean value indicating whether the operation succeeded unless throwing.
      */
-    function transferFromAndCall(address from, address to, uint256 value, bytes calldata data) external returns (bool);
+    function transferFromAndCall(address from, address to, uint256 value, bytes calldata data)
+        external
+        returns (bool);
 
     /**
      * @dev Sets a `value` amount of tokens as the allowance of `spender` over the
@@ -815,11 +814,10 @@ interface IOAppReceiver is ILayerZeroReceiver {
      * @dev Applications can optionally choose to implement a separate composeMsg sender that is NOT the bridging layer.
      * @dev The default sender IS the OAppReceiver implementer.
      */
-    function isComposeMsgSender(
-        Origin calldata _origin,
-        bytes calldata _message,
-        address _sender
-    ) external view returns (bool isSender);
+    function isComposeMsgSender(Origin calldata _origin, bytes calldata _message, address _sender)
+        external
+        view
+        returns (bool isSender);
 }
 
 // node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
@@ -935,13 +933,9 @@ library SafeERC20 {
      *
      * Reverts if the returned value is other than `true`.
      */
-    function transferFromAndCallRelaxed(
-        IERC1363 token,
-        address from,
-        address to,
-        uint256 value,
-        bytes memory data
-    ) internal {
+    function transferFromAndCallRelaxed(IERC1363 token, address from, address to, uint256 value, bytes memory data)
+        internal
+    {
         if (to.code.length == 0) {
             safeTransferFrom(token, from, to, value);
         } else if (!token.transferFromAndCall(from, to, value, data)) {
@@ -1136,11 +1130,12 @@ abstract contract OAppReceiver is IOAppReceiver, OAppCore {
      * @dev Applications can optionally choose to implement separate composeMsg senders that are NOT the bridging layer.
      * @dev The default sender IS the OAppReceiver implementer.
      */
-    function isComposeMsgSender(
-        Origin calldata /*_origin*/,
-        bytes calldata /*_message*/,
-        address _sender
-    ) public view virtual returns (bool) {
+    function isComposeMsgSender(Origin calldata, /*_origin*/ bytes calldata, /*_message*/ address _sender)
+        public
+        view
+        virtual
+        returns (bool)
+    {
         return _sender == address(this);
     }
 
@@ -1168,7 +1163,7 @@ abstract contract OAppReceiver is IOAppReceiver, OAppCore {
      * @dev This is also enforced by the OApp.
      * @dev By default this is NOT enabled. ie. nextNonce is hardcoded to return 0.
      */
-    function nextNonce(uint32 /*_srcEid*/, bytes32 /*_sender*/) public view virtual returns (uint64 nonce) {
+    function nextNonce(uint32, /*_srcEid*/ bytes32 /*_sender*/ ) public view virtual returns (uint64 nonce) {
         return 0;
     }
 
@@ -1254,17 +1249,15 @@ abstract contract OAppSender is OAppCore {
      *      - nativeFee: The native fee for the message.
      *      - lzTokenFee: The LZ token fee for the message.
      */
-    function _quote(
-        uint32 _dstEid,
-        bytes memory _message,
-        bytes memory _options,
-        bool _payInLzToken
-    ) internal view virtual returns (MessagingFee memory fee) {
-        return
-            endpoint.quote(
-                MessagingParams(_dstEid, _getPeerOrRevert(_dstEid), _message, _options, _payInLzToken),
-                address(this)
-            );
+    function _quote(uint32 _dstEid, bytes memory _message, bytes memory _options, bool _payInLzToken)
+        internal
+        view
+        virtual
+        returns (MessagingFee memory fee)
+    {
+        return endpoint.quote(
+            MessagingParams(_dstEid, _getPeerOrRevert(_dstEid), _message, _options, _payInLzToken), address(this)
+        );
     }
 
     /**
@@ -1292,12 +1285,11 @@ abstract contract OAppSender is OAppCore {
         uint256 messageValue = _payNative(_fee.nativeFee);
         if (_fee.lzTokenFee > 0) _payLzToken(_fee.lzTokenFee);
 
-        return
+        return endpoint
             // solhint-disable-next-line check-send-result
-            endpoint.send{ value: messageValue }(
-                MessagingParams(_dstEid, _getPeerOrRevert(_dstEid), _message, _options, _fee.lzTokenFee > 0),
-                _refundAddress
-            );
+            .send{value: messageValue}(
+            MessagingParams(_dstEid, _getPeerOrRevert(_dstEid), _message, _options, _fee.lzTokenFee > 0), _refundAddress
+        );
     }
 
     /**

@@ -3,11 +3,9 @@
 pragma solidity >=0.8.7 <0.9.0;
 
 abstract contract ERC2981 {
-
     // ERC165 bytes to add to interface array - set in parent contract
     bytes4 private constant _INTERFACE_ID_ERC2981 = 0x2a55205a;
 
-    uint256 internal constant _SCALING_FACTOR = 10**12;
     uint256 internal _royaltyBps;
     address internal _royaltyRecipient;
 

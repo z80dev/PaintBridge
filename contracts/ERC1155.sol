@@ -24,11 +24,11 @@ contract ERC1155 is ERC1155Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
         bytes data;
     }
 
-    constructor(
-        address originalAddress,
-        address royaltyRecipient,
-        uint256 royaltyBps
-    ) ERC2981(royaltyRecipient, royaltyBps) PermissionedMintingNFT() BridgedNFT(originalAddress) {}
+    constructor(address originalAddress, address royaltyRecipient, uint256 royaltyBps)
+        ERC2981(royaltyRecipient, royaltyBps)
+        PermissionedMintingNFT()
+        BridgedNFT(originalAddress)
+    {}
 
     function mint(address to, uint256 id, uint256 amount, bytes memory data) public mintIsOpen onlyMinter {
         _mint(to, id, amount, data);

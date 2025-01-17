@@ -4,7 +4,6 @@ pragma solidity ^0.8.4;
 import {ERC721} from "./ERC721.sol";
 
 contract ERC721Enumerable is ERC721 {
-
     // array with all token IDs, used for enumeration
     uint256[] private _allTokens;
     // Mapping from token ID to position in the allTokens array
@@ -29,24 +28,26 @@ contract ERC721Enumerable is ERC721 {
         return _ownedTokens[owner][index];
     }
 
-    constructor(address originalAddress,
-                string memory name,
-                string memory symbol,
-                string memory baseURI,
-                string memory hasExtension,
-                address royaltyRecipient,
-                uint256 royaltyBps) ERC721(originalAddress, name, symbol, baseURI, hasExtension, royaltyRecipient, royaltyBps) {}
+    constructor(
+        address originalAddress,
+        string memory name,
+        string memory symbol,
+        string memory baseURI,
+        string memory hasExtension,
+        address royaltyRecipient,
+        uint256 royaltyBps
+    ) ERC721(originalAddress, name, symbol, baseURI, hasExtension, royaltyRecipient, royaltyBps) {}
 
     function _beforeTokenTransfer(address _from, address _to, uint256 _tokenId) internal override {
         if (_from == address(0)) {
             _addTokenToAllTokensEnumeration(_tokenId);
-        } else if (_from != _to){
+        } else if (_from != _to) {
             _removeTokenFromOwnerEnumeration(_from, _tokenId);
         }
         if (_to == address(0)) {
             _removeTokenFromAllTokensEnumeration(_tokenId);
             _removeTokenFromOwnerEnumeration(_from, _tokenId);
-        } else if (_to != _from){
+        } else if (_to != _from) {
             _addTokenToOwnerEnumeration(_to, _tokenId);
         }
     }
@@ -150,5 +151,4 @@ contract ERC721Enumerable is ERC721 {
             result := or(result, eq(s, 0x780e9d63))
         }
     }
-
 }

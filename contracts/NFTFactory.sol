@@ -8,43 +8,45 @@ import {ERC1155} from "./ERC1155.sol";
 import {Ownable} from "./Ownable.sol";
 
 contract NFTFactory {
-
-    function deployERC721(address originalAddress,
-                          string memory name,
-                          string memory symbol,
-                          string memory baseURI,
-                          string memory extension,
-                          address royaltyRecipient,
-                          uint256 royaltyBps) public returns (address)
-    {
-        ERC721 newCollection = new ERC721(originalAddress, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
+    function deployERC721(
+        address originalAddress,
+        string memory name,
+        string memory symbol,
+        string memory baseURI,
+        string memory extension,
+        address royaltyRecipient,
+        uint256 royaltyBps
+    ) public returns (address) {
+        ERC721 newCollection =
+            new ERC721(originalAddress, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
         Ownable(newCollection).transferOwnership(msg.sender);
         address newAddress = address(newCollection);
         return newAddress;
     }
 
-    function deployERC721Enumerable(address originalAddress,
-                                    string memory name,
-                                    string memory symbol,
-                                    string memory baseURI,
-                                    string memory extension,
-                                    address royaltyRecipient,
-                                    uint256 royaltyBps) public returns (address)
-    {
-        ERC721 newCollection = new ERC721Enumerable(originalAddress, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
+    function deployERC721Enumerable(
+        address originalAddress,
+        string memory name,
+        string memory symbol,
+        string memory baseURI,
+        string memory extension,
+        address royaltyRecipient,
+        uint256 royaltyBps
+    ) public returns (address) {
+        ERC721 newCollection =
+            new ERC721Enumerable(originalAddress, name, symbol, baseURI, extension, royaltyRecipient, royaltyBps);
         Ownable(newCollection).transferOwnership(msg.sender);
         address newAddress = address(newCollection);
         return newAddress;
     }
 
-    function deployERC1155(address originalAddress,
-                           address royaltyRecipient,
-                           uint256 royaltyBps) public returns (address)
+    function deployERC1155(address originalAddress, address royaltyRecipient, uint256 royaltyBps)
+        public
+        returns (address)
     {
         ERC1155 newCollection = new ERC1155(originalAddress, royaltyRecipient, royaltyBps);
         Ownable(newCollection).transferOwnership(msg.sender);
         address newAddress = address(newCollection);
         return newAddress;
     }
-
 }

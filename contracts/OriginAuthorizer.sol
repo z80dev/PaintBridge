@@ -2,19 +2,14 @@
 
 pragma solidity >=0.8.7 <0.9.0;
 
-import { OAppSender, OAppCore, Ownable, Origin, MessagingFee, ILayerZeroEndpointV2 } from "./MyOApp.sol";
-import { OptionsBuilder } from "./OptionsBuilder.sol";
+import {OAppSender, OAppCore, Ownable, Origin, MessagingFee, ILayerZeroEndpointV2} from "./MyOApp.sol";
+import {OptionsBuilder} from "./OptionsBuilder.sol";
 
 interface IEndpointV2 {
-     function setSendLibrary(
-        address _oapp,
-        uint32 _eid,
-        address _newLib
-     ) external;
+    function setSendLibrary(address _oapp, uint32 _eid, address _newLib) external;
 }
 
 contract OriginAuthorizer is OAppSender {
-
     uint32 public immutable DESTINATION_EID;
 
     using OptionsBuilder for bytes;
@@ -44,7 +39,5 @@ contract OriginAuthorizer is OAppSender {
         payable(msg.sender).transfer(address(this).balance);
     }
 
-    fallback() external payable {
-    }
-
+    fallback() external payable {}
 }

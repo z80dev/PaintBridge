@@ -119,11 +119,10 @@ interface IOAppOptionsType3 {
      * @param _extraOptions Additional options passed by the caller.
      * @return options The combination of caller specified options AND enforced options.
      */
-    function combineOptions(
-        uint32 _eid,
-        uint16 _msgType,
-        bytes calldata _extraOptions
-    ) external view returns (bytes memory options);
+    function combineOptions(uint32 _eid, uint16 _msgType, bytes calldata _extraOptions)
+        external
+        view
+        returns (bytes memory options);
 }
 
 // node_modules/@openzeppelin/contracts/utils/Context.sol
@@ -1327,14 +1326,7 @@ library SafeCast {
  */
 
 library BytesLib {
-    function concat(
-        bytes memory _preBytes,
-        bytes memory _postBytes
-    )
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function concat(bytes memory _preBytes, bytes memory _postBytes) internal pure returns (bytes memory) {
         bytes memory tempBytes;
 
         assembly {
@@ -1382,24 +1374,23 @@ library BytesLib {
             // length of the arrays.
             end := add(mc, length)
 
-            for {
-                let cc := add(_postBytes, 0x20)
-            } lt(mc, end) {
+            for { let cc := add(_postBytes, 0x20) } lt(mc, end) {
                 mc := add(mc, 0x20)
                 cc := add(cc, 0x20)
-            } {
-                mstore(mc, mload(cc))
-            }
+            } { mstore(mc, mload(cc)) }
 
             // Update the free-memory pointer by padding our last write location
             // to 32 bytes: add 31 bytes to the end of tempBytes to move to the
             // next 32 byte block, then round down to the nearest multiple of
             // 32. If the sum of the length of the two arrays is zero then add
             // one before rounding down to leave a blank 32 bytes (the length block with 0).
-            mstore(0x40, and(
-              add(add(end, iszero(add(length, mload(_preBytes)))), 31),
-              not(31) // Round down to the nearest 32 bytes.
-            ))
+            mstore(
+                0x40,
+                and(
+                    add(add(end, iszero(add(length, mload(_preBytes)))), 31),
+                    not(31) // Round down to the nearest 32 bytes.
+                )
+            )
         }
 
         return tempBytes;
@@ -1483,10 +1474,7 @@ library BytesLib {
                 sstore(
                     sc,
                     add(
-                        and(
-                            fslot,
-                            0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00
-                        ),
+                        and(fslot, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00),
                         and(mload(mc), mask)
                     )
                 )
@@ -1497,9 +1485,7 @@ library BytesLib {
                 } lt(mc, end) {
                     sc := add(sc, 1)
                     mc := add(mc, 0x20)
-                } {
-                    sstore(sc, mload(mc))
-                }
+                } { sstore(sc, mload(mc)) }
 
                 mask := exp(0x100, sub(mc, end))
 
@@ -1531,9 +1517,7 @@ library BytesLib {
                 } lt(mc, end) {
                     sc := add(sc, 1)
                     mc := add(mc, 0x20)
-                } {
-                    sstore(sc, mload(mc))
-                }
+                } { sstore(sc, mload(mc)) }
 
                 mask := exp(0x100, sub(mc, end))
 
@@ -1542,15 +1526,7 @@ library BytesLib {
         }
     }
 
-    function slice(
-        bytes memory _bytes,
-        uint256 _start,
-        uint256 _length
-    )
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function slice(bytes memory _bytes, uint256 _start, uint256 _length) internal pure returns (bytes memory) {
         require(_length + 31 >= _length, "slice_overflow");
         require(_bytes.length >= _start + _length, "slice_outOfBounds");
 
@@ -1587,9 +1563,7 @@ library BytesLib {
                 } lt(mc, end) {
                     mc := add(mc, 0x20)
                     cc := add(cc, 0x20)
-                } {
-                    mstore(mc, mload(cc))
-                }
+                } { mstore(mc, mload(cc)) }
 
                 mstore(tempBytes, _length)
 
@@ -1623,7 +1597,7 @@ library BytesLib {
     }
 
     function toUint8(bytes memory _bytes, uint256 _start) internal pure returns (uint8) {
-        require(_bytes.length >= _start + 1 , "toUint8_outOfBounds");
+        require(_bytes.length >= _start + 1, "toUint8_outOfBounds");
         uint8 tempUint;
 
         assembly {
@@ -1728,11 +1702,10 @@ library BytesLib {
                 let mc := add(_preBytes, 0x20)
                 let end := add(mc, length)
 
-                for {
-                    let cc := add(_postBytes, 0x20)
+                for { let cc := add(_postBytes, 0x20) }
                 // the next line is the loop condition:
                 // while(uint256(mc < end) + cb == 2)
-                } eq(add(lt(mc, end), cb), 2) {
+                eq(add(lt(mc, end), cb), 2) {
                     mc := add(mc, 0x20)
                     cc := add(cc, 0x20)
                 } {
@@ -1773,8 +1746,8 @@ library BytesLib {
                 let cc := add(_postBytes, 0x20)
 
                 for {
-                // the next line is the loop condition:
-                // while(uint256(mc < endWord) + cb == 2)
+                    // the next line is the loop condition:
+                    // while(uint256(mc < endWord) + cb == 2)
                 } eq(add(lt(mc, endMinusWord), cb), 2) {
                     mc := add(mc, 0x20)
                     cc := add(cc, 0x20)
@@ -1795,13 +1768,10 @@ library BytesLib {
                     let numTailBytes := and(length, 0x1f)
                     let mcRem := mload(mc)
                     let ccRem := mload(cc)
-                    for {
-                        let i := 0
+                    for { let i := 0 }
                     // the next line is the loop condition:
                     // while(uint256(i < numTailBytes) + cb == 2)
-                    } eq(add(lt(i, numTailBytes), cb), 2) {
-                        i := add(i, 1)
-                    } {
+                    eq(add(lt(i, numTailBytes), cb), 2) { i := add(i, 1) } {
                         if iszero(eq(byte(i, mcRem), byte(i, ccRem))) {
                             // unsuccess:
                             success := 0
@@ -1819,14 +1789,7 @@ library BytesLib {
         return success;
     }
 
-    function equalStorage(
-        bytes storage _preBytes,
-        bytes memory _postBytes
-    )
-        internal
-        view
-        returns (bool)
-    {
+    function equalStorage(bytes storage _preBytes, bytes memory _postBytes) internal view returns (bool) {
         bool success = true;
 
         assembly {
@@ -1919,10 +1882,11 @@ library ExecutorOptions {
     /// @return optionType the type of the option
     /// @return option the option of the executor
     /// @return cursor the cursor to start decoding the next executor option
-    function nextExecutorOption(
-        bytes calldata _options,
-        uint256 _cursor
-    ) internal pure returns (uint8 optionType, bytes calldata option, uint256 cursor) {
+    function nextExecutorOption(bytes calldata _options, uint256 _cursor)
+        internal
+        pure
+        returns (uint8 optionType, bytes calldata option, uint256 cursor)
+    {
         unchecked {
             // skip worker id
             cursor = _cursor + 1;
@@ -1954,18 +1918,22 @@ library ExecutorOptions {
         receiver = _option.toB32(16);
     }
 
-    function decodeLzComposeOption(
-        bytes calldata _option
-    ) internal pure returns (uint16 index, uint128 gas, uint128 value) {
+    function decodeLzComposeOption(bytes calldata _option)
+        internal
+        pure
+        returns (uint16 index, uint128 gas, uint128 value)
+    {
         if (_option.length != 18 && _option.length != 34) revert Executor_InvalidLzComposeOption();
         index = _option.toU16(0);
         gas = _option.toU128(2);
         value = _option.length == 34 ? _option.toU128(18) : 0;
     }
 
-    function decodeLzReadOption(
-        bytes calldata _option
-    ) internal pure returns (uint128 gas, uint32 calldataSize, uint128 value) {
+    function decodeLzReadOption(bytes calldata _option)
+        internal
+        pure
+        returns (uint128 gas, uint32 calldataSize, uint128 value)
+    {
         if (_option.length != 20 && _option.length != 36) revert Executor_InvalidLzReadOption();
         gas = _option.toU128(0);
         calldataSize = _option.toU32(16);
@@ -1984,11 +1952,11 @@ library ExecutorOptions {
         return _value == 0 ? abi.encodePacked(_index, _gas) : abi.encodePacked(_index, _gas, _value);
     }
 
-    function encodeLzReadOption(
-        uint128 _gas,
-        uint32 _calldataSize,
-        uint128 _value
-    ) internal pure returns (bytes memory) {
+    function encodeLzReadOption(uint128 _gas, uint32 _calldataSize, uint128 _value)
+        internal
+        pure
+        returns (bytes memory)
+    {
         return _value == 0 ? abi.encodePacked(_gas, _calldataSize) : abi.encodePacked(_gas, _calldataSize, _value);
     }
 }
@@ -2110,9 +2078,11 @@ library DVNOptions {
     ///        dvn_id: uint8, dvn_idx: uint8, option_size: uint16, option_type: uint8, option: bytes
     /// @return dvnOptions the grouped options, still share the same format of _options
     /// @return dvnIndices the dvn indices
-    function groupDVNOptionsByIdx(
-        bytes memory _options
-    ) internal pure returns (bytes[] memory dvnOptions, uint8[] memory dvnIndices) {
+    function groupDVNOptionsByIdx(bytes memory _options)
+        internal
+        pure
+        returns (bytes[] memory dvnOptions, uint8[] memory dvnIndices)
+    {
         if (_options.length == 0) return (dvnOptions, dvnIndices);
 
         uint8 numDVNs = getNumDVNs(_options);
@@ -2242,10 +2212,11 @@ library DVNOptions {
     /// @return optionType the type of the option
     /// @return option the option
     /// @return cursor the cursor to start decoding the next option
-    function nextDVNOption(
-        bytes calldata _options,
-        uint256 _cursor
-    ) internal pure returns (uint8 optionType, bytes calldata option, uint256 cursor) {
+    function nextDVNOption(bytes calldata _options, uint256 _cursor)
+        internal
+        pure
+        returns (uint8 optionType, bytes calldata option, uint256 cursor)
+    {
         unchecked {
             // skip worker id
             cursor = _cursor + 1;
@@ -2323,11 +2294,12 @@ abstract contract OAppOptionsType3 is IOAppOptionsType3, Ownable {
      * - The resulting options will be {gasLimit: 300k, msg.value: 1.5 ether} when the message is executed on the remote lzReceive() function.
      * @dev This presence of duplicated options is handled off-chain in the verifier/executor.
      */
-    function combineOptions(
-        uint32 _eid,
-        uint16 _msgType,
-        bytes calldata _extraOptions
-    ) public view virtual returns (bytes memory) {
+    function combineOptions(uint32 _eid, uint16 _msgType, bytes calldata _extraOptions)
+        public
+        view
+        virtual
+        returns (bytes memory)
+    {
         bytes memory enforced = enforcedOptions[_eid][_msgType];
 
         // No enforced options, pass whatever the caller supplied, even if it's empty or legacy type 1/2 options.
@@ -2404,11 +2376,12 @@ library OptionsBuilder {
      * eg. if (_gas: 200k, and _value: 1 ether) AND (_gas: 100k, _value: 0.5 ether) are sent in an option to the LayerZeroEndpoint,
      * that becomes (300k, 1.5 ether) when the message is executed on the remote lzReceive() function.
      */
-    function addExecutorLzReceiveOption(
-        bytes memory _options,
-        uint128 _gas,
-        uint128 _value
-    ) internal pure onlyType3(_options) returns (bytes memory) {
+    function addExecutorLzReceiveOption(bytes memory _options, uint128 _gas, uint128 _value)
+        internal
+        pure
+        onlyType3(_options)
+        returns (bytes memory)
+    {
         bytes memory option = ExecutorOptions.encodeLzReceiveOption(_gas, _value);
         return addExecutorOption(_options, ExecutorOptions.OPTION_TYPE_LZRECEIVE, option);
     }
@@ -2422,11 +2395,12 @@ library OptionsBuilder {
      *
      * @dev When multiples of this option are added, they are summed by the executor on the remote chain.
      */
-    function addExecutorNativeDropOption(
-        bytes memory _options,
-        uint128 _amount,
-        bytes32 _receiver
-    ) internal pure onlyType3(_options) returns (bytes memory) {
+    function addExecutorNativeDropOption(bytes memory _options, uint128 _amount, bytes32 _receiver)
+        internal
+        pure
+        onlyType3(_options)
+        returns (bytes memory)
+    {
         bytes memory option = ExecutorOptions.encodeNativeDropOption(_amount, _receiver);
         return addExecutorOption(_options, ExecutorOptions.OPTION_TYPE_NATIVE_DROP, option);
     }
@@ -2440,12 +2414,12 @@ library OptionsBuilder {
     //  *
     //  * @dev When multiples of this option are added, they are summed by the executor on the remote chain.
     //  */
-    function addExecutorLzReadOption(
-        bytes memory _options,
-        uint128 _gas,
-        uint32 _size,
-        uint128 _value
-    ) internal pure onlyType3(_options) returns (bytes memory) {
+    function addExecutorLzReadOption(bytes memory _options, uint128 _gas, uint32 _size, uint128 _value)
+        internal
+        pure
+        onlyType3(_options)
+        returns (bytes memory)
+    {
         bytes memory option = ExecutorOptions.encodeLzReadOption(_gas, _size, _value);
         return addExecutorOption(_options, ExecutorOptions.OPTION_TYPE_LZREAD, option);
     }
@@ -2462,12 +2436,12 @@ library OptionsBuilder {
      * @dev If the OApp sends N lzCompose calls on the remote, you must provide N incremented indexes starting with 0.
      * ie. When your remote OApp composes (N = 3) messages, you must set this option for index 0,1,2
      */
-    function addExecutorLzComposeOption(
-        bytes memory _options,
-        uint16 _index,
-        uint128 _gas,
-        uint128 _value
-    ) internal pure onlyType3(_options) returns (bytes memory) {
+    function addExecutorLzComposeOption(bytes memory _options, uint16 _index, uint128 _gas, uint128 _value)
+        internal
+        pure
+        onlyType3(_options)
+        returns (bytes memory)
+    {
         bytes memory option = ExecutorOptions.encodeLzComposeOption(_index, _gas, _value);
         return addExecutorOption(_options, ExecutorOptions.OPTION_TYPE_LZCOMPOSE, option);
     }
@@ -2477,9 +2451,12 @@ library OptionsBuilder {
      * @param _options The existing options container.
      * @return options The updated options container.
      */
-    function addExecutorOrderedExecutionOption(
-        bytes memory _options
-    ) internal pure onlyType3(_options) returns (bytes memory) {
+    function addExecutorOrderedExecutionOption(bytes memory _options)
+        internal
+        pure
+        onlyType3(_options)
+        returns (bytes memory)
+    {
         return addExecutorOption(_options, ExecutorOptions.OPTION_TYPE_ORDERED_EXECUTION, bytes(""));
     }
 
@@ -2489,10 +2466,12 @@ library OptionsBuilder {
      * @param _dvnIdx The DVN index for the pre-crime option.
      * @return options The updated options container.
      */
-    function addDVNPreCrimeOption(
-        bytes memory _options,
-        uint8 _dvnIdx
-    ) internal pure onlyType3(_options) returns (bytes memory) {
+    function addDVNPreCrimeOption(bytes memory _options, uint8 _dvnIdx)
+        internal
+        pure
+        onlyType3(_options)
+        returns (bytes memory)
+    {
         return addDVNOption(_options, _dvnIdx, DVNOptions.OPTION_TYPE_PRECRIME, bytes(""));
     }
 
@@ -2503,19 +2482,19 @@ library OptionsBuilder {
      * @param _option The encoded data for the executor option.
      * @return options The updated options container.
      */
-    function addExecutorOption(
-        bytes memory _options,
-        uint8 _optionType,
-        bytes memory _option
-    ) internal pure onlyType3(_options) returns (bytes memory) {
-        return
-            abi.encodePacked(
-                _options,
-                ExecutorOptions.WORKER_ID,
-                _option.length.toUint16() + 1, // +1 for optionType
-                _optionType,
-                _option
-            );
+    function addExecutorOption(bytes memory _options, uint8 _optionType, bytes memory _option)
+        internal
+        pure
+        onlyType3(_options)
+        returns (bytes memory)
+    {
+        return abi.encodePacked(
+            _options,
+            ExecutorOptions.WORKER_ID,
+            _option.length.toUint16() + 1, // +1 for optionType
+            _optionType,
+            _option
+        );
     }
 
     /**
@@ -2526,21 +2505,20 @@ library OptionsBuilder {
      * @param _option The encoded data for the DVN option.
      * @return options The updated options container.
      */
-    function addDVNOption(
-        bytes memory _options,
-        uint8 _dvnIdx,
-        uint8 _optionType,
-        bytes memory _option
-    ) internal pure onlyType3(_options) returns (bytes memory) {
-        return
-            abi.encodePacked(
-                _options,
-                DVNOptions.WORKER_ID,
-                _option.length.toUint16() + 2, // +2 for optionType and dvnIdx
-                _dvnIdx,
-                _optionType,
-                _option
-            );
+    function addDVNOption(bytes memory _options, uint8 _dvnIdx, uint8 _optionType, bytes memory _option)
+        internal
+        pure
+        onlyType3(_options)
+        returns (bytes memory)
+    {
+        return abi.encodePacked(
+            _options,
+            DVNOptions.WORKER_ID,
+            _option.length.toUint16() + 2, // +2 for optionType and dvnIdx
+            _dvnIdx,
+            _optionType,
+            _option
+        );
     }
 
     /**
