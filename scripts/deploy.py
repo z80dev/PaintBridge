@@ -1,30 +1,28 @@
 #!/usr/bin/env python3
 
 from ape import project, accounts
-import json
-
-
-JSON_PATH = "addresses.json"
-
-
-# function to write the address of the deployed contract to a json file
-# if the file doesn't exist, create it
-# if the file exists, update it
-def write_to_json(address):
-    try:
-        with open(JSON_PATH, "r") as f:
-            data = json.load(f)
-    except FileNotFoundError:
-        data = {}
-    data["factory"] = address
-    with open(JSON_PATH, "w") as f:
-        json.dump(data, f)
-
 
 def main():
-    deployer = accounts.load("painter")
-    deployer.set_autosign(True, " ")
-    project.provider.set_balance(deployer.address, 100 * 10**18)
-    factory = project.NFTFactory.deploy(sender=deployer)
-    print(f"Factory deployed at {factory.address}")
-    write_to_json(factory.address)
+deployer = accounts.load("paintbot")
+deployer.set_autosign(True, " ")
+factory = project.NFTFactory.deploy(sender=deployer)
+print(f"Factory deployed at {factory.address}")
+
+tx = factory.deployERC721(
+    "0x0000000000000000000000000000000000000000",
+    "NFT Collection",
+    "NFT",
+    "ipfs://baseuri/",
+    ".json",
+    deployer.address,
+    500, # 5% royalty
+    sender=deployer
+)
+collection_address = tx.return_value
+print(f"ERC721 deployed at {collection_address}")
+
+# mint some tokens
+collection = project.ERC721.at(collection_address)
+tx = collection.bulkAirdrop([(deployer.address, [1, 2, 3])], sender=deployer)
+print("Tokens minted")
+print(f"https://ftmscan.org/tx/{tx.txid}")

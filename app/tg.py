@@ -6,23 +6,9 @@ import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
 from ape.logging import logger as ape_logger, LogLevel
+from .config import env_vars
 
 from .nft_bridge import NFTBridge
-from .nft import (
-    get_bridged_address,
-    get_collection_data_api,
-    get_holders_via_api,
-    get_nft_royalty_info,
-    get_onchain_royalty_info,
-    get_collection_owner,
-    get_collection_data,
-    deploy_721,
-    deploy_1155,
-    airdrop_holders,
-    get_token_uris,
-    set_token_uris,
-    admin_set_bridging_approved
-)
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -31,16 +17,20 @@ logging.basicConfig(
 
 ape_logger.set_level(LogLevel.ERROR)
 
-BOT_TOKEN = os.getenv('TG_BOT_TOKEN')
-DEPLOYER_ID = os.getenv('DEPLOYER_ACCOUNT_ID')
-DEPLOYER_PASSWORD = os.getenv('DEPLOYER_PASSWORD')
-SOURCE_ENDPOINT = os.getenv('SOURCE_ENDPOINT_ADDRESS')
-TARGET_ENDPOINT = os.getenv('TARGET_ENDPOINT_ADDRESS')
-EXPECTED_EID = int(os.getenv('EXPECTED_EID', '100'))
-FLASK_ENV = os.getenv('FLASK_ENV', 'development')
+nft_bridge = NFTBridge(
+    env_vars.DEPLOYER_NAME,
+    env_vars.DEPLOYER_PASSWORD,
+    env_vars.SOURCE_ENDPOINT_ADDRESS,
+    env_vars.TARGET_ENDPOINT_ADDRESS,
+    int(env_vars.EXPECTED_EID),
+    env_vars.FACTORY_ADDRESS,
+    env_vars.BRIDGE_CONTROL_ADDRESS,
+    env_vars.AUTHORIZER_ADDRESS,
+    env_vars.FLASK_ENV
+)
 
 def tx_hash_to_link(tx_hash: str) -> str:
-    if FLASK_ENV == 'prod':
+    if env_vars.FLASK_ENV == 'prod':
         return f"https://sonicscan.org/tx/{tx_hash}"
     return f"https://testnet.soniclabs.com/tx/{tx_hash}"
 
@@ -52,10 +42,10 @@ async def bridge(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Please provide an address to bridge.")
         return
     param = ''.join(context.args)
-    if bridged_addr := get_bridged_address(param):
+    if bridged_addr := nft_bridge.get_bridged_address(param):
         await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Already bridged: {bridged_addr}")
         return
-    collection_data = get_collection_data_api(param)
+    collection_data = nft_bridge.get_collection_data_api(param)
     if not collection_data.get("verified"):
         await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Collection not verified: {param}")
         return
@@ -81,7 +71,7 @@ async def bridge(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
     msg = f"Bridging collection {param}\n"
     original_address = param
-    holders = get_holders_via_api(original_address)
+    holders = nft_bridge.get_holders_via_api(original_address)
     airdrop_units = list(holders.values())
     num_holders = len(holders.keys())
     is721 = airdrop_units[0].is721
@@ -92,10 +82,10 @@ async def bridge(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
     base_uri = ""  # will use below for checking if we need to set uris manually
     try:
-        royalty_data = get_nft_royalty_info(original_address)
+        royalty_data = nft_bridge.get_nft_royalty_info(original_address)
         assert royalty_data is not None
     except Exception:
-        royalty_data = get_onchain_royalty_info(original_address)
+        royalty_data = nft_bridge.get_onchain_royalty_info(original_address)
 
     recipient = royalty_data["recipient"]
     fee = royalty_data["fee"]
@@ -103,22 +93,22 @@ async def bridge(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = f"*Royalty Info*\nRecipient: {recipient}\nFee: {fee}\n"
     await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
 
-    original_owner = get_collection_owner(original_address)
+    original_owner = nft_bridge.get_collection_owner(original_address)
     if is721:
-        name, symbol, base_uri, _, extension = get_collection_data(original_address)
+        name, symbol, base_uri, _, extension = nft_bridge.get_collection_data(original_address)
         msg = f"*Collection Info*\nName: {name}\nSymbol: {symbol}\nBase URI: {base_uri}\nExtension: {extension}\nOwner: {original_owner}\n"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
         msg = f"Deploying 721 contract\n"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
-        deployment_tx = deploy_721(
+        deployment_tx = nft_bridge.deploy_721(
             original_address, original_owner, name, symbol, base_uri, extension, recipient, fee
         )
         msg = f"Deployment tx: {tx_hash_to_link(deployment_tx.txn_hash)}\n"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
     else:
-        deployment_tx = deploy_1155(original_address, original_owner, recipient, fee)
+        deployment_tx = nft_bridge.deploy_1155(original_address, original_owner, recipient, fee)
 
-    bridged_address = get_bridged_address(original_address)
+    bridged_address = nft_bridge.get_bridged_address(original_address)
 
     if not bridged_address:
         response_msg = f"Failed to deploy contract to target chain: {original_address}"
@@ -130,14 +120,14 @@ async def bridge(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         msg = f"Airdropping tokens to {num_holders} holders\n"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
-        airdrop_txs = airdrop_holders(bridged_address, airdrop_units)
+        airdrop_txs = nft_bridge.airdrop_holders(bridged_address, airdrop_units)
         airdrop_tx_links = [tx_hash_to_link(tx.txn_hash) for tx in airdrop_txs]
         response_msg = f"\nAirdrop txs:\n{'\n'.join(airdrop_tx_links)}"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=response_msg)
 
         if not is721 or base_uri == "":
-            uris = get_token_uris(original_address, is721=is721)
-            uri_txs = set_token_uris(bridged_address, uris)
+            uris = nft_bridge.get_token_uris(original_address, is721=is721)
+            uri_txs = nft_bridge.set_token_uris(bridged_address, uris)
             uri_tx_links = [tx_hash_to_link(tx.txn_hash) for tx in uri_txs]
             response_msg = f"URI txs: {'\n'.join(uri_tx_links)}"
             await context.bot.send_message(chat_id=update.effective_chat.id, text=response_msg)
@@ -149,7 +139,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     address = ''.join(context.args)
     try:
-        tx = admin_set_bridging_approved(address, True)
+        tx = nft_bridge.admin_set_bridging_approved(address, True)
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=f"Successfully approved {address}\nTx: {tx_hash_to_link(tx.txn_hash)}"
@@ -161,9 +151,9 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 def main():
-    if BOT_TOKEN is None:
+    if env_vars.TG_BOT_TOKEN is None:
         raise ValueError("Please set the TG_BOT_TOKEN environment variable")
-    application = ApplicationBuilder().token(BOT_TOKEN).build()
+    application = ApplicationBuilder().token(env_vars.TG_BOT_TOKEN).build()
 
     start_handler = CommandHandler('start', start)
     application.add_handler(start_handler)
