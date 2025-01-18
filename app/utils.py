@@ -2,8 +2,11 @@
 from ape import networks
 import os
 import re
+import logging
 
 flask_env = os.getenv("FLASK_ENV")
+
+logger = logging.getLogger(__name__)
 
 def chunk(lst, n):
     for i in range(0, len(lst), n):
@@ -61,3 +64,26 @@ def parse_url(url: str) -> tuple[str, str, str] | None:
         return (base_url, number, extension or "")
 
     return None
+
+def has_too_many_nfts(collection_data: dict) -> bool:
+    logger.debug(f"Checking NFT count for collection: {collection_data.get('stats', {}).get('totalNFTs')}")
+    if stats := collection_data.get("stats"):
+        total_nfts = int(stats.get("totalNFTs"))
+        return total_nfts > 11000
+    return False
+
+def has_too_many_owners(collection_data: dict) -> bool:
+    logger.debug(f"Checking owner count for collection: {collection_data.get('stats', {}).get('numOwners')}")
+    if stats := collection_data.get("stats"):
+        num_owners = int(stats.get("numOwners"))
+        return num_owners > 11000
+    return False
+
+def last_sale_within_six_months(collection_data: dict) -> bool:
+    logger.debug(f"Checking last sale timestamp: {collection_data.get('stats', {}).get('timestampLastSale')}")
+    if stats := collection_data.get("stats"):
+        last_sale = int(stats.get("timestampLastSale"))
+        current_time = int(time.time())
+        six_months = 6 * 30 * 24 * 60 * 60
+        return current_time - last_sale <= six_months
+    return False

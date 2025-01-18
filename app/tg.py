@@ -8,6 +8,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
 from ape.logging import logger as ape_logger, LogLevel
 from .config import env_vars
 from .nft_bridge import NFTBridge
+from .utils import has_too_many_nfts, has_too_many_owners, last_sale_within_six_months
 
 # Configure logging with more detailed format
 logging.basicConfig(
@@ -49,6 +50,8 @@ def tx_hash_to_link(tx_hash: str) -> str:
     return f"https://testnet.soniclabs.com/tx/{tx_hash}"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    assert update.effective_chat is not None
+    assert update.effective_user is not None
     logger.info(f"Start command received from user {update.effective_user.id}")
     msg_str = """Hello! I can bridge NFTs for you. Collection requirements:
 - Must be verified
@@ -60,29 +63,6 @@ Use /approve <address> to approve a collection for bridging
 Use /bridge <address> to bridge a collection"""
     await context.bot.send_message(chat_id=update.effective_chat.id, text=msg_str)
     logger.debug("Start message sent successfully")
-
-def has_too_many_nfts(collection_data: dict) -> bool:
-    logger.debug(f"Checking NFT count for collection: {collection_data.get('stats', {}).get('totalNFTs')}")
-    if stats := collection_data.get("stats"):
-        total_nfts = int(stats.get("totalNFTs"))
-        return total_nfts > 11000
-    return False
-
-def has_too_many_owners(collection_data: dict) -> bool:
-    logger.debug(f"Checking owner count for collection: {collection_data.get('stats', {}).get('numOwners')}")
-    if stats := collection_data.get("stats"):
-        num_owners = int(stats.get("numOwners"))
-        return num_owners > 11000
-    return False
-
-def last_sale_within_six_months(collection_data: dict) -> bool:
-    logger.debug(f"Checking last sale timestamp: {collection_data.get('stats', {}).get('timestampLastSale')}")
-    if stats := collection_data.get("stats"):
-        last_sale = int(stats.get("timestampLastSale"))
-        current_time = int(time.time())
-        six_months = 6 * 30 * 24 * 60 * 60
-        return current_time - last_sale <= six_months
-    return False
 
 async def validate_collection(update, context, addr, collection_data):
     logger.info(f"Validating collection {addr}")
