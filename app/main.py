@@ -1,7 +1,8 @@
-import time
+from time import time
 from flask import Flask, jsonify
 from .config import env_vars
 from .nft_bridge import NFTBridge
+from .utils import has_too_many_nfts, has_too_many_owners, last_sale_within_six_months
 
 app = Flask(__name__)
 
@@ -48,32 +49,25 @@ def bridge(param):
             "original_address": original_address,
         })
 
-    if stats := collection_data.get("stats"):
-        total_nfts = int(stats.get("totalNFTs"))
-        num_owners = int(stats.get("numOwners"))
+    if has_too_many_nfts(collection_data):
+        return jsonify({
+            "error": "Collection has too many NFTs",
+            "original_address": original_address,
+            "total_nfts": collection_data.get("stats", {}).get("totalNFTs")
+        })
 
-        if total_nfts > 11000:
-            return jsonify({
-                "error": "Collection has too many NFTs",
-                "original_address": original_address,
-                "total_nfts": total_nfts,
-            })
+    if has_too_many_owners(collection_data):
+        return jsonify({
+            "error": "Collection has too many owners",
+            "original_address": original_address,
+            "num_owners": collection_data.get("stats", {}).get("numOwners")
+        })
 
-        if num_owners > 11000:
-            return jsonify({
-                "error": "Collection has too many owners",
-                "original_address": original_address,
-                "num_owners": num_owners,
-            })
-
-        last_sale = int(stats.get("timestampLastSale"))
-        current_time = int(time.time())
-        six_months = 6 * 30 * 24 * 60 * 60
-        if current_time - last_sale > six_months:
-            return jsonify({
-                "error": "Collection has not been sold in 6 months",
-                "original_address": original_address,
-            })
+    if not last_sale_within_six_months(collection_data):
+        return jsonify({
+            "error": "Collection has not been sold in 6 months",
+            "original_address": original_address,
+        })
 
     original_owner = nft_bridge.get_collection_owner(original_address)
     if is721:
