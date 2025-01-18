@@ -26,7 +26,8 @@ nft_bridge = NFTBridge(
     env_vars.FACTORY_ADDRESS,
     env_vars.BRIDGE_CONTROL_ADDRESS,
     env_vars.AUTHORIZER_ADDRESS,
-    env_vars.FLASK_ENV
+    env_vars.FLASK_ENV,
+    skip_authorizer=True
 )
 
 def tx_hash_to_link(tx_hash: str) -> str:
@@ -35,57 +36,75 @@ def tx_hash_to_link(tx_hash: str) -> str:
     return f"https://testnet.soniclabs.com/tx/{tx_hash}"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="Hello! I can bridge NFTs for you.")
+    # generate message text as a string, providing only the code and no explanation or commentary.
+    # tell the user this bot can bridge NFTs and what requirements the collection must meet according to the rest of the code
+    msg_str = """Hello! I can bridge NFTs for you. Collection requirements:
+- Must be verified
+- Less than 11,000 total NFTs
+- Less than 11,000 owners
+- Must have had a sale in the last 6 months
+- Must have been approved for bridging (by collection owner or admin)
+Use /approve <address> to approve a collection for bridging
+Use /bridge <address> to bridge a collection"""
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=msg_str)
+
+def has_too_many_nfts(collection_data: dict) -> bool:
+    if stats := collection_data.get("stats"):
+        total_nfts = int(stats.get("totalNFTs"))
+        return total_nfts > 11000
+    return False
+
+def has_too_many_owners(collection_data: dict) -> bool:
+    if stats := collection_data.get("stats"):
+        num_owners = int(stats.get("numOwners"))
+        return num_owners > 11000
+    return False
+
+def last_sale_within_six_months(collection_data: dict) -> bool:
+    if stats := collection_data.get("stats"):
+        last_sale = int(stats.get("timestampLastSale"))
+        current_time = int(time.time())
+        six_months = 6 * 30 * 24 * 60 * 60
+        return current_time - last_sale <= six_months
+    return False
 
 async def bridge(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    assert update.effective_chat is not None
     if not context.args:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Please provide an address to bridge.")
         return
-    param = ''.join(context.args)
-    if bridged_addr := nft_bridge.get_bridged_address(param):
+    addr = context.args[0]
+    if bridged_addr := nft_bridge.get_bridged_address(addr):
         await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Already bridged: {bridged_addr}")
         return
-    collection_data = nft_bridge.get_collection_data_api(param)
+    collection_data = nft_bridge.get_collection_data_api(addr)
     if not collection_data.get("verified"):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Collection not verified: {param}")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Collection not verified: {addr}")
         return
-    if stats := collection_data.get("stats"):
-        total_nfts = int(stats.get("totalNFTs"))
-        num_owners = int(stats.get("numOwners"))
-        if total_nfts > 11000:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Collection has too many NFTs: {param} {total_nfts} tokenIds")
-            return
-        if num_owners > 11000:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Collection has too many owners: {param} {num_owners} owners")
-            return
-        # fail if the collection has not been sold in 6 months
-        last_sale = int(stats.get("timestampLastSale"))
-        current_time = int(time.time())
-        print(f"Last sale: {last_sale}")
-        print(f"Current time: {current_time}")
-        print(f"Diff: {current_time - last_sale}")
-        six_months = 6 * 30 * 24 * 60 * 60
-        print(f"Six months: {six_months}")
-        if current_time - last_sale > six_months:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Collection has not been sold in 6 months: {param}")
-            return
-    msg = f"Bridging collection {param}\n"
-    original_address = param
+    if has_too_many_nfts(collection_data):
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Collection has too many NFTs: {addr} {total_nfts} tokenIds")
+        return
+    if has_too_many_owners(collection_data):
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Collection has too many owners: {addr} {num_owners} owners")
+        return
+    if not last_sale_within_six_months(collection_data):
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Collection has not been sold in 6 months: {addr}")
+        return
+    msg = f"Bridging collection {addr}\n"
+    original_address = addr
     holders = nft_bridge.get_holders_via_api(original_address)
     airdrop_units = list(holders.values())
     num_holders = len(holders.keys())
     is721 = airdrop_units[0].is721
-    if is721:
-        msg += f"Collection is 721\n"
-    else:
-        msg += f"Collection is 1155\n"
     await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
     base_uri = ""  # will use below for checking if we need to set uris manually
     try:
         royalty_data = nft_bridge.get_nft_royalty_info(original_address)
+        print(f"royalty_data: {royalty_data}")
         assert royalty_data is not None
     except Exception:
         royalty_data = nft_bridge.get_onchain_royalty_info(original_address)
+        print(f"royalty_data2: {royalty_data}")
 
     recipient = royalty_data["recipient"]
     fee = royalty_data["fee"]

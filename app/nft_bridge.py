@@ -41,7 +41,8 @@ class NFTBridge:
         factory_address: Optional[str] = None,
         bridge_control_address: Optional[str] = None,
         authorizer_address: Optional[str] = None,
-        environment: str = "production"
+        environment: str = "production",
+        skip_authorizer: bool = False
     ):
         """
         Initialize the NFT Bridge with required addresses and deployment parameters.
@@ -64,16 +65,16 @@ class NFTBridge:
         self.target_endpoint = target_endpoint
 
         # Initialize contracts
-        if factory_address is None:
+        if not factory_address:
             self.factory_address = self._deploy_factory()
         else:
             self.factory_address = factory_address
-        if bridge_control_address is None:
+        if not bridge_control_address:
             self.bridge_control_address = self._deploy_bridge_control(expected_eid)
         else:
             self.bridge_control_address = bridge_control_address
 
-        if authorizer_address is None:
+        if not authorizer_address and not skip_authorizer:
             self.authorizer_address = self._deploy_authorizer()
         else:
             self.authorizer_address = authorizer_address
@@ -360,3 +361,9 @@ class NFTBridge:
             txs.append(tx)
 
         return txs
+
+    @target_chain_context
+    def admin_set_bridging_approved(self, collection_address: str, approved: bool):
+        """Approve or disapprove bridging for a collection."""
+        bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
+        return bridge_control.adminSetBridgingApproved(collection_address, approved, sender=self.deployer)
