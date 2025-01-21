@@ -2,7 +2,7 @@
 pragma solidity >=0.8.7 <0.9.0;
 
 import {Script} from "forge-std/Script.sol";
-import {NFTFactory} from "../contracts/NFTFactory.sol";
+import {NFTFactory, ERC721Factory, ERC1155Factory} from "../contracts/NFTFactory.sol";
 import {SCCNFTBridge} from "../contracts/SCCNFTBridge.sol";
 import {console} from "forge-std/console.sol";
 
@@ -13,8 +13,12 @@ contract DeployScript is Script {
     function run() external {
         vm.startBroadcast();
 
-        // Deploy NFTFactory first
-        NFTFactory nftFactory = new NFTFactory();
+        // Deploy factories first
+        ERC721Factory erc721Factory = new ERC721Factory();
+        ERC1155Factory erc1155Factory = new ERC1155Factory();
+
+        // Deploy NFTFactory with factory addresses
+        NFTFactory nftFactory = new NFTFactory(address(erc721Factory), address(erc1155Factory));
 
         // Deploy SCCNFTBridge with the factory
         SCCNFTBridge bridgeControl = new SCCNFTBridge(ENDPOINT, address(nftFactory), SOURCE_EID);

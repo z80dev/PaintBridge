@@ -2,7 +2,7 @@
 pragma solidity >=0.8.7 <0.9.0;
 
 import {Script} from "forge-std/Script.sol";
-import {NFTFactory} from "../contracts/NFTFactory.sol";
+import {NFTFactory, ERC721Factory, ERC1155Factory} from "../contracts/NFTFactory.sol";
 import {SCCNFTBridge} from "../contracts/SCCNFTBridge.sol";
 import {OriginAuthorizer} from "../contracts/OriginAuthorizer.sol";
 import {console} from "forge-std/console.sol";
@@ -22,16 +22,19 @@ contract DeployAll is Script {
         console.log("Deploying to Sonic (Destination Chain)...");
 
         vm.startBroadcast();
-        // Deploy NFTFactory and Bridge on Sonic
-        NFTFactory nftFactory = new NFTFactory();
-        SCCNFTBridge bridgeControl = new SCCNFTBridge(
-            SONIC_ENDPOINT,
-            address(nftFactory),
-            FANTOM_EID
-        );
+        // Deploy factories first
+        ERC721Factory erc721Factory = new ERC721Factory();
+        ERC1155Factory erc1155Factory = new ERC1155Factory();
+
+        // Deploy NFTFactory with factory addresses
+        NFTFactory nftFactory = new NFTFactory(address(erc721Factory), address(erc1155Factory));
+
+        SCCNFTBridge bridgeControl = new SCCNFTBridge(SONIC_ENDPOINT, address(nftFactory), FANTOM_EID);
         vm.stopBroadcast();
 
         address bridgeAddress = address(bridgeControl);
+        console.log("ERC721Factory deployed to:", address(erc721Factory));
+        console.log("ERC1155Factory deployed to:", address(erc1155Factory));
         console.log("NFTFactory deployed to:", address(nftFactory));
         console.log("SCCNFTBridge deployed to:", bridgeAddress);
 
@@ -41,10 +44,7 @@ contract DeployAll is Script {
 
         vm.startBroadcast();
         // Deploy OriginAuthorizer on Fantom
-        OriginAuthorizer authorizer = new OriginAuthorizer(
-            SONIC_EID,
-            FANTOM_ENDPOINT
-        );
+        OriginAuthorizer authorizer = new OriginAuthorizer(SONIC_EID, FANTOM_ENDPOINT);
 
         // Set destination factory address
         authorizer.setDestinationFactoryAddress(bridgeAddress);

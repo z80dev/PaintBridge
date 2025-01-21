@@ -4,7 +4,7 @@ pragma solidity >=0.8.7 <0.9.0;
 
 import {Test, console} from "forge-std/Test.sol";
 import {MockEndpoint} from "../contracts/MockEndpoint.sol";
-import {NFTFactory} from "../contracts/NFTFactory.sol";
+import {NFTFactory, ERC721Factory, ERC1155Factory} from "../contracts/NFTFactory.sol";
 import {SCCNFTBridge} from "../contracts/SCCNFTBridge.sol";
 import {SCCNFTBridgeHarness} from "./SCCNFTBridgeHarness.sol";
 
@@ -48,7 +48,9 @@ contract SCCNFTBridgeTest is Test {
 
     function setUp() public {
         endpoint = new MockEndpoint();
-        nftFactory = new NFTFactory();
+        ERC721Factory erc721Factory = new ERC721Factory();
+        ERC1155Factory erc1155Factory = new ERC1155Factory();
+        nftFactory = new NFTFactory(address(erc721Factory), address(erc1155Factory));
         bridgeControl = new SCCNFTBridgeHarness(address(endpoint), address(nftFactory), TEST_EID);
         bridgeControl.setOriginCaller(ORIGIN_SENDER.toAddress());
         vm.roll(100000000);

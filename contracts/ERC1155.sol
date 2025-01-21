@@ -8,6 +8,8 @@ import {PermissionedMintingNFT} from "./PermissionedMintingNFT.sol";
 import {BridgedNFT} from "./BridgedNFT.sol";
 
 contract ERC1155 is ERC1155Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
+    // NFT Metadata
+    string public name;
     // tokenURI overrides everything
     mapping(uint256 => string) private _tokenURIs;
     bool public burningEnabled = true;
@@ -29,6 +31,10 @@ contract ERC1155 is ERC1155Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
         PermissionedMintingNFT()
         BridgedNFT(originalAddress)
     {}
+
+    function setName(string memory _name) external onlyOwner {
+        name = _name;
+    }
 
     function mint(address to, uint256 id, uint256 amount, bytes memory data) public mintIsOpen onlyMinter {
         _mint(to, id, amount, data);
