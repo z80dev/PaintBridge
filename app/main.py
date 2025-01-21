@@ -43,11 +43,11 @@ def bridge(param):
     fee = royalty_data["fee"]
 
     collection_data = nft_bridge.get_collection_data_api(original_address)
-    if not collection_data.get("verified"):
-        return jsonify({
-            "error": "Collection not verified",
-            "original_address": original_address,
-        })
+    # if not collection_data.get("verified"):
+    #     return jsonify({
+    #         "error": "Collection not verified",
+    #         "original_address": original_address,
+    #     })
 
     if has_too_many_nfts(collection_data):
         return jsonify({
@@ -63,11 +63,11 @@ def bridge(param):
             "num_owners": collection_data.get("stats", {}).get("numOwners")
         })
 
-    if not last_sale_within_six_months(collection_data):
-        return jsonify({
-            "error": "Collection has not been sold in 6 months",
-            "original_address": original_address,
-        })
+    # if not last_sale_within_six_months(collection_data):
+    #     return jsonify({
+    #         "error": "Collection has not been sold in 6 months",
+    #         "original_address": original_address,
+    #     })
 
     original_owner = nft_bridge.get_collection_owner(original_address)
     if is721:
