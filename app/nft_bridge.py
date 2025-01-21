@@ -23,6 +23,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('NFTBridge')
+logger.setLevel(logging.DEBUG)
 
 @dataclass
 class AirdropUnit:
@@ -36,7 +37,7 @@ class AirdropUnit:
         if self.is721:
             return (self.address, self.token_ids)
         else:
-            return (self.address, self.token_ids, self.amounts)
+            return (self.address, self.token_ids, self.amounts, self.data)
 
 class NFTBridge:
     def __init__(
@@ -246,6 +247,7 @@ class NFTBridge:
             original_owner,
             royalty_recipient,
             royalty_bps,
+            "",
             sender=self.deployer
         )
 
@@ -272,7 +274,23 @@ class NFTBridge:
     ):
         """Deploy a bridged ERC721 contract."""
         bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
+        logger.debug(f"bridge_control_address: {self.bridge_control_address}")
         enumerable = self.is_enumerable(original_address)
+        # log all arguments
+        logger.debug(f"original_address: {original_address}")
+        logger.debug(f"original_owner: {original_owner}")
+        logger.debug(f"name: {name}")
+        logger.debug(f"symbol: {symbol}")
+        logger.debug(f"base_uri: {base_uri}")
+        logger.debug(f"extension: {extension}")
+        logger.debug(f"recipient: {recipient}")
+        logger.debug(f"bps: {bps}")
+        logger.debug(f"enumerable: {enumerable}")
+
+        # check if is approved for bridging
+        approved = bridge_control.bridgingApproved(original_address)
+        logger.debug(f"approved: {approved}")
+
         return bridge_control.deployERC721(
             original_address,
             original_owner,
@@ -317,7 +335,8 @@ class NFTBridge:
                         holder,
                         [token_id],
                         [amount],
-                        is_erc721
+                        is_erc721,
+                        data="",
                     )
                 else:
                     holders_dict[holder].token_ids.append(token_id)
