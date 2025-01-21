@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 import os
 import requests
+import logging
 from typing import List, Dict, Tuple, Optional
 
 from ape import Contract, accounts, project
@@ -15,6 +16,13 @@ from .constants import (
     DATA_PREFIX,
     ERC1155_INTERFACE_ID,
 )
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('NFTBridge')
 
 @dataclass
 class AirdropUnit:

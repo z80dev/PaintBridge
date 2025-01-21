@@ -1,5 +1,3 @@
-import os
-import time
 import dotenv
 dotenv.load_dotenv()
 import logging
@@ -17,6 +15,7 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 # Set up file handler
 file_handler = logging.FileHandler('nft_bridge_bot.log')
@@ -38,7 +37,7 @@ nft_bridge = NFTBridge(
     env_vars.BRIDGE_CONTROL_ADDRESS,
     env_vars.AUTHORIZER_ADDRESS,
     env_vars.FLASK_ENV,
-    skip_authorizer=True
+    skip_authorizer=False
 )
 logger.info("NFT Bridge initialized successfully")
 
@@ -123,6 +122,7 @@ async def handle_deployment(update, context, addr, is721, original_owner, royalt
         await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
 
         logger.info("Deploying ERC721 contract")
+        logger.debug(f"ERC721 Params: {addr}, {original_owner}, {name}, {symbol}, {base_uri}, {extension}, {royalty_data['recipient']}, {royalty_data['fee']}")
         deployment_tx = nft_bridge.deploy_721(
             addr, original_owner, name, symbol, base_uri, extension,
             royalty_data["recipient"], royalty_data["fee"]
@@ -176,6 +176,11 @@ async def bridge(update: Update, context: ContextTypes.DEFAULT_TYPE):
     addr = context.args[0]
     logger.info(f"Starting bridge process for address: {addr}")
 
+    if len(context.args) > 1:
+        logger.info(f"Additional arguments provided: {context.args[1:]}")
+
+    override_requirements = len(context.args) > 1 and context.args[1] == "override"
+
     if bridged_addr := nft_bridge.get_bridged_address(addr):
         logger.info(f"Collection {addr} already bridged to {bridged_addr}")
         await context.bot.send_message(chat_id=update.effective_chat.id,
@@ -183,7 +188,7 @@ async def bridge(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     collection_data = nft_bridge.get_collection_data_api(addr)
-    if not await validate_collection(update, context, addr, collection_data):
+    if not override_requirements and not await validate_collection(update, context, addr, collection_data):
         logger.warning(f"Collection validation failed for {addr}")
         return
 
@@ -238,6 +243,8 @@ async def remint(update: Update, context: ContextTypes.DEFAULT_TYPE):
     addr = context.args[0]
     logger.info(f"Starting remint process for {addr}")
 
+    override_requirements = len(context.args) > 1 and context.args[1] == "override"
+
     bridged_addr = nft_bridge.get_bridged_address(addr)
     if not bridged_addr:
         logger.warning(f"Collection {addr} not yet bridged")
@@ -246,7 +253,7 @@ async def remint(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     collection_data = nft_bridge.get_collection_data_api(addr)
-    if not await validate_collection(update, context, addr, collection_data):
+    if not override_requirements and not await validate_collection(update, context, addr, collection_data):
         logger.warning(f"Collection validation failed for remint of {addr}")
         return
 

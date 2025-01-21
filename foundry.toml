@@ -3,6 +3,7 @@ src = "contracts"
 out = "out"
 libs = ["lib"]
 via_ir = true
+evm_version = "paris"
 
 [rpc_endpoints]
 sonic = "${SONIC_RPC_URL}"

@@ -9,6 +9,8 @@ abstract contract ERC2981 {
     uint256 internal _royaltyBps;
     address internal _royaltyRecipient;
 
+    error Invalid();
+
     constructor(address recipient, uint256 royaltyBps) {
         _setRoyalties(recipient, royaltyBps);
     }
@@ -24,7 +26,7 @@ abstract contract ERC2981 {
     }
 
     function _setRoyalties(address recipient, uint256 bps) internal {
-        require(bps <= 10000, "ERC721: INVALID_BPS");
+        if (bps > 10000) revert Invalid();
         _royaltyRecipient = recipient;
         _royaltyBps = bps;
         emit RoyaltiesSet(recipient, bps);

@@ -23,6 +23,8 @@ node:
       uri: https://rpc.blaze.soniclabs.com
     sonic:
       uri: https://rpc.soniclabs.com
+    opera:
+      uri: https://rpc.ftm.tools
 
 default_ecosystem: ethereum
 

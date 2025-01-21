@@ -56,7 +56,7 @@ class EnvVars:
         self.SOURCE_ENDPOINT_ADDRESS = endpoints[self.FLASK_ENV]["source"]
         self.TARGET_ENDPOINT_ADDRESS = endpoints[self.FLASK_ENV]["target"]
         self.FACTORY_ADDRESS = os.environ.get('FACTORY_ADDRESS')
-        self.BRIDGE_CONTROL_ADDRESS = os.environ.get('BRIDGE_CONTROL_ADDRESS')
+        self.BRIDGE_CONTROL_ADDRESS = os.environ.get('BRIDGE_ADDRESS')
         self.AUTHORIZER_ADDRESS = os.environ.get('AUTHORIZER_ADDRESS')
 
     def __getattr__(self, name):
