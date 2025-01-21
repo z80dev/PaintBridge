@@ -157,6 +157,19 @@ contract ERC1155Test is Test {
         assertEq(keccak256(bytes(nft.uri(2))), keccak256(bytes("uri2")));
     }
 
+
+    function test_SetName() public {
+        // Set a new name
+        nft.setName("My NFT Collection");
+        assertEq(nft.name(), "My NFT Collection");
+
+        // Only admin can set name
+        address attacker = address(0x4321);
+        vm.expectRevert();
+        vm.prank(attacker);
+        nft.setName("Hacked NFTs");
+     }
+
     function testFail_tokenURINotSet() public {
         nft.uri(1);
     }

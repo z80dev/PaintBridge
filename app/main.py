@@ -76,7 +76,10 @@ def bridge(param):
             original_address, original_owner, name, symbol, base_uri, extension, recipient, fee
         )
     else:
-        deployment_tx = nft_bridge.deploy_1155(original_address, original_owner, recipient, fee)
+        name = nft_bridge.get_collection_name(original_address)
+        deployment_tx = nft_bridge.deploy_1155(
+            original_address, original_owner, recipient, fee, name
+        )
 
     bridged_address = nft_bridge.get_bridged_address(original_address)
     if not bridged_address:

@@ -257,11 +257,14 @@ contract SCCNFTBridgeTest is Test {
         address originalOwner = address(0x1002);
         address royaltyRecipient = address(0x1003);
         uint256 royaltyBps = 1000;
-        string memory uri = "https://test.com/";
+        string memory name = "TOKEN";
         address newCollection =
-            bridgeControl.deployERC1155(originalAddress, originalOwner, royaltyRecipient, royaltyBps, uri);
+            bridgeControl.deployERC1155(originalAddress, originalOwner, royaltyRecipient, royaltyBps, name);
         assertEq(bridgeControl.bridgedAddressForOriginal(originalAddress), newCollection);
         assertEq(bridgeControl.originalOwnerForCollection(newCollection), originalOwner);
+
+        // check name
+        assertEq(ERC1155(newCollection).name(), name);
 
         address recipient = address(0x1004);
         bridgeControl.mint1155(newCollection, recipient, 1, 1, "");
@@ -304,11 +307,14 @@ contract SCCNFTBridgeTest is Test {
         address originalOwner = address(0x1002);
         address royaltyRecipient = address(0x1003);
         uint256 royaltyBps = 1000;
-        string memory uri = "https://test.com/";
+        string memory name = "TOKEN";
         address newCollection =
-            bridgeControl.deployERC1155(originalAddress, originalOwner, royaltyRecipient, royaltyBps, uri);
+            bridgeControl.deployERC1155(originalAddress, originalOwner, royaltyRecipient, royaltyBps, name);
         assertEq(bridgeControl.bridgedAddressForOriginal(originalAddress), newCollection);
         assertEq(bridgeControl.originalOwnerForCollection(newCollection), originalOwner);
+
+        // check name
+        assertEq(ERC1155(newCollection).name(), name);
 
         address recipient = address(0x1004);
 

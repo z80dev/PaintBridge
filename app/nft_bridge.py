@@ -191,6 +191,15 @@ class NFTBridge:
         has_extension = bool(extension)
         return name, symbol, base_uri, has_extension, extension
 
+    @source_chain_context
+    def get_collection_name(self, original_address: str) -> str:
+        """Get the name of the collection."""
+        nft_contract = project.ERC721.at(original_address)
+        try:
+            return nft_contract.name()
+        except Exception:
+            return ""
+
     def get_collection_data_api(self, original_address: str) -> Dict:
         """Get collection data from PaintSwap API."""
         endpoint = f"https://api.paintswap.finance/v2/collections/{original_address}"
@@ -204,6 +213,9 @@ class NFTBridge:
         bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
         start_from = 0
         txs = []
+
+        if len(token_uris) == 0:
+            return txs
 
         if token_uris[0] is None:
             start_from = 1
@@ -238,7 +250,8 @@ class NFTBridge:
         original_address: str,
         original_owner: str,
         royalty_recipient: str,
-        royalty_bps: int
+        royalty_bps: int,
+        name: str
     ):
         """Deploy a bridged ERC1155 contract."""
         bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
@@ -247,7 +260,7 @@ class NFTBridge:
             original_owner,
             royalty_recipient,
             royalty_bps,
-            "",
+            name,
             sender=self.deployer
         )
 

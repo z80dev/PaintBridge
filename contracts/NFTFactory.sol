@@ -90,11 +90,12 @@ contract NFTFactory {
         return newContract;
     }
 
-    function deployERC1155(address originalAddress, address royaltyRecipient, uint256 royaltyBps)
+    function deployERC1155(address originalAddress, address royaltyRecipient, uint256 royaltyBps, string memory name)
         public
         returns (address newContract)
     {
         newContract = erc1155Factory.deployERC1155(originalAddress, royaltyRecipient, royaltyBps);
+        ERC1155(newContract).setName(name);
         Ownable(newContract).transferOwnership(msg.sender);
         return newContract;
     }

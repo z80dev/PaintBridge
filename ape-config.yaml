@@ -43,7 +43,7 @@ fantom:
     required_confirmations: 2
 
 solidity:
-  evm_version: cancun
+  evm_version: paris
   via_ir: True
 
 dependencies:

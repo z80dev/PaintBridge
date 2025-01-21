@@ -5,7 +5,7 @@ pragma solidity >=0.8.7 <0.9.0;
 import {Origin} from "./MyOApp.sol";
 import {Ownable} from "./Ownable.sol";
 import {LZControl} from "./LZControl.sol";
-import {INFTFactory} from "./interfaces/INFTFactory.sol";
+import {NFTFactory} from "./NFTFactory.sol";
 import {IManaged721} from "./interfaces/IManaged721.sol";
 import {IManaged1155} from "./interfaces/IManaged1155.sol";
 import {Byte32AddressUtil} from "./utils/Utils.sol";
@@ -23,7 +23,7 @@ contract SCCNFTBridge is LZControl {
     mapping(address => uint256) public blockNumberBridged;
     mapping(address => bool) public canDeploy;
     mapping(address => bool) public bridgingApproved;
-    INFTFactory public nftFactory;
+    NFTFactory public nftFactory;
 
     event CollectionOwnerBridgingApproved(address collectionOwner, address collectionAddress, bool approved);
     event AdminBridgingApproved(address collectionAddress, bool approved);
@@ -37,7 +37,11 @@ contract SCCNFTBridge is LZControl {
 
     constructor(address endpoint, address factory, uint32 expectedEID) LZControl(endpoint, expectedEID) {
         canDeploy[msg.sender] = true;
-        nftFactory = INFTFactory(factory);
+        nftFactory = NFTFactory(factory);
+    }
+
+    function setFactory(address factory) public onlyOwner {
+        nftFactory = NFTFactory(factory);
     }
 
     function _handlePayload(bytes calldata payload) internal returns (address) {
@@ -46,7 +50,7 @@ contract SCCNFTBridge is LZControl {
         return collectionAddress;
     }
 
-    function _checkBridgedWithin3Months(address collectionAddress) internal {
+    function _checkBridgedWithin3Months(address collectionAddress) internal view {
         address originalAddress = originalAddressForBridged[collectionAddress];
         if (block.number - blockNumberBridged[originalAddress] > THREE_MONTHS) {
             revert AdminPeriodExpired(block.number, blockNumberBridged[collectionAddress]);
@@ -138,7 +142,7 @@ contract SCCNFTBridge is LZControl {
         address originalOwner,
         address royaltyRecipient,
         uint256 royaltyBps,
-        string memory uri
+        string memory name
     ) public bridgingIsApproved(originalAddress) returns (address) {
         if (!canDeploy[msg.sender]) {
             revert Forbidden();
@@ -146,7 +150,7 @@ contract SCCNFTBridge is LZControl {
         if (bridgedAddressForOriginal[originalAddress] != address(0)) {
             revert AlreadyBridged();
         }
-        address newCollection = nftFactory.deployERC1155(originalAddress, royaltyRecipient, royaltyBps);
+        address newCollection = nftFactory.deployERC1155(originalAddress, royaltyRecipient, royaltyBps, name);
         bridgedAddressForOriginal[originalAddress] = newCollection;
         originalAddressForBridged[newCollection] = originalAddress;
         blockNumberBridged[originalAddress] = block.number;

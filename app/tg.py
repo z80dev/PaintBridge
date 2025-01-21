@@ -131,8 +131,9 @@ async def handle_deployment(update, context, addr, is721, original_owner, royalt
         return deployment_tx, base_uri
     else:
         logger.info("Deploying ERC1155 contract")
+        name = nft_bridge.get_collection_name(addr)
         deployment_tx = nft_bridge.deploy_1155(
-            addr, original_owner, royalty_data["recipient"], royalty_data["fee"]
+            addr, original_owner, royalty_data["recipient"], royalty_data["fee"], name
         )
         logger.info(f"ERC1155 deployment transaction: {deployment_tx.txn_hash}")
         return deployment_tx, ""
@@ -229,6 +230,18 @@ async def bridge(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await handle_uris(update, context, addr, bridged_address, is721, base_uri)
     logger.info(f"Bridge process completed successfully for {addr}")
+
+    summary_msg = f"Collection bridged successfully: {addr}\n" \
+                    f"Original address: {addr}\n" \
+                    f"Bridged address: {bridged_address}\n" \
+                    f"ERC721: {is721}\n" \
+                    f"Original owner: {original_owner}\n" \
+                    f"Royalty recipient: {royalty_data['recipient']}\n" \
+                    f"Royalty fee: {royalty_data['fee']}\n" \
+                    f"Total holders: {len(holders)}\n" \
+                    f"Total airdrop txs: {len(airdrop_txs)}\n"
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=summary_msg)
+
 
 async def remint(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"Remint command received from user {update.effective_user.id}")
