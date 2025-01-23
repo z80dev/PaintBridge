@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
 from ape.logging import logger as ape_logger, LogLevel
 from .config import env_vars
-from .nft_bridge import NFTBridge
+from .nft_bridge import NFTBridge, AirdropUnit
 from .utils import has_too_many_nfts, has_too_many_owners, last_sale_within_six_months
 
 # Configure logging with more detailed format
@@ -283,6 +283,65 @@ async def remint(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await handle_uris(update, context, addr, bridged_addr, is721, "")
     logger.info(f"Remint process completed successfully for {addr}")
 
+async def reclaim(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"Reclaim command received from user {update.effective_user.id}")
+    assert update.effective_chat is not None
+
+    if not context.args:
+        logger.warning("No address provided for reclaim command")
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text="Please provide an address to reclaim.")
+        return
+
+    addr = context.args[0]
+    logger.info(f"Starting reclaim process for {addr}")
+
+    bridged_addr = nft_bridge.get_bridged_address(addr)
+    if not bridged_addr:
+        logger.warning(f"Collection {addr} not yet bridged")
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=f"Collection not yet bridged. Use /bridge {addr} first.")
+        return
+
+    override_requirements = len(context.args) > 1 and context.args[1] == "override"
+    collection_data = nft_bridge.get_collection_data_api(addr)
+    if not override_requirements and not await validate_collection(update, context, addr, collection_data):
+        logger.warning(f"Collection validation failed for reclaim of {addr}")
+        return
+
+    holders = nft_bridge.get_holders_via_api(addr)
+    if not holders:
+        logger.warning(f"No holders found for {addr}")
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=f"No holders found for {addr}.")
+        return
+
+    is721 = list(holders.values())[0].is721
+    admin_address = nft_bridge.deployer.address
+
+    admin_airdrop_units = []
+
+    if is721:
+        current_token_ids = []
+        for unit in holders.values():
+            if len(current_token_ids) < 25:
+                admin_airdrop_units.append(AirdropUnit(admin_address, current_token_ids.copy(), [], is721=True))
+                current_token_ids = []
+            current_token_ids.extend(unit.token_ids)
+        if len(current_token_ids) > 0:
+            admin_airdrop_units.append(AirdropUnit(admin_address, current_token_ids.copy(), [], is721=True))
+    else:
+        for unit in holders.values():
+            admin_airdrop_units.append(AirdropUnit(admin_address, unit.token_ids, unit.amounts, is721=False))
+
+    airdrop_txs = await handle_airdrop(update, context, bridged_addr, admin_airdrop_units)
+    airdrop_links = [tx_hash_to_link(tx.txn_hash) for tx in airdrop_txs]
+    await context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text=f"Reclaim txs:\n{'\n'.join(airdrop_links)}")
+
+    await handle_uris(update, context, addr, bridged_addr, is721, "")
+    logger.info(f"Reclaim completed for {addr}")
+
 async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"Approve command received from user {update.effective_user.id}")
     if not context.args:
@@ -320,11 +379,13 @@ def main():
     bridge_handler = CommandHandler('bridge', bridge)
     approve_handler = CommandHandler('approve', approve)
     remint_handler = CommandHandler('remint', remint)
+    reclaim_handler = CommandHandler('reclaim', reclaim)
 
     application.add_handler(start_handler)
     application.add_handler(bridge_handler)
     application.add_handler(approve_handler)
     application.add_handler(remint_handler)
+    application.add_handler(reclaim_handler)
 
     logger.info("Starting bot polling")
     application.run_polling()
