@@ -85,8 +85,11 @@ contract ERC721 is ERC721Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
         /// @solidity memory-safe-assembly
         assembly {
             let s := shr(224, interfaceId)
-            // ERC165: 0x01ffc9a7, ERC2981: 0x2a55205a, ERC721: 0x80ac58cd
+            // ERC165: 0x01ffc9a7, ERC2981: 0x2a55205a
             result := or(eq(s, 0x01ffc9a7), eq(s, 0x2a55205a))
+            // ERC721Metadata: 0x5b5e139f
+            result := or(result, eq(s, 0x5b5e139f))
+            // ERC721: 0x80ac58cd
             result := or(result, eq(s, 0x80ac58cd))
         }
     }

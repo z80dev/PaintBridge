@@ -145,6 +145,8 @@ contract ERC721Enumerable is ERC721 {
             // ERC165: 0x01ffc9a7
             // ERC2981: 0x2a55205a
             result := or(eq(s, 0x01ffc9a7), eq(s, 0x2a55205a))
+            // ERC721Metadata: 0x5b5e139f
+            result := or(result, eq(s, 0x5b5e139f))
             // ERC721: 0x80ac58cd
             result := or(result, eq(s, 0x80ac58cd))
             // ERC721Enumerable: 0x780e9d63
