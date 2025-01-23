@@ -77,6 +77,10 @@ contract ERC721 is ERC721Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
         }
     }
 
+    function burn(uint256 tokenId) public mintIsOpen onlyMinter {
+        _burn(tokenId);
+    }
+
     function setRoyalties(address recipient, uint256 bps) external onlyOwner {
         _setRoyalties(recipient, bps);
     }

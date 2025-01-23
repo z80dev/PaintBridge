@@ -103,6 +103,19 @@ contract SCCNFTBridge is LZControl {
         _;
     }
 
+    function clearBridgedStorage(address originalAddress)
+        public
+        onlyAdminDuringAdminPeriod(bridgedAddressForOriginal[originalAddress])
+    {
+        address bridgedAddress = bridgedAddressForOriginal[originalAddress];
+        require(bridgedAddress != address(0), "No bridged collection found");
+
+        delete bridgedAddressForOriginal[originalAddress];
+        delete originalAddressForBridged[bridgedAddress];
+        delete blockNumberBridged[originalAddress];
+        delete originalOwnerForCollection[bridgedAddress];
+    }
+
     function deployERC721(
         address originalAddress,
         address originalOwner,
@@ -179,6 +192,12 @@ contract SCCNFTBridge is LZControl {
         onlyAdminDuringAdminPeriod(collection)
     {
         IManaged1155(collection).burn(from, id, amount);
+    }
+
+    function burn721(address collection, uint256[] calldata tokenIds) public onlyAdminDuringAdminPeriod(collection) {
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            ERC721(collection).burn(tokenIds[i]);
+        }
     }
 
     function airdrop721(address collection, ERC721.AirdropUnit[] calldata airdropUnits)
