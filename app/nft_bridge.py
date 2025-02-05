@@ -404,9 +404,15 @@ class NFTBridge:
             for i in range(num_consumed, len(airdrop_units)):
                 current_length = len(airdrop_units[i].token_ids)
                 if total_this_chunk + current_length > n:
+                    # If we can't add even one item, add it anyway to avoid infinite loop
+                    if len(to_return) == 0:
+                        to_return.append(airdrop_units[i])
                     break
                 total_this_chunk += current_length
                 to_return.append(airdrop_units[i])
+
+            if not to_return:  # Additional safety check
+                break
 
             num_consumed += len(to_return)
             yield to_return
@@ -418,8 +424,10 @@ class NFTBridge:
         is721 = holders[0].is721
         txs = []
 
-        for item_chunk in self._chunk_airdrop_units(holders, 200):
+        for item_chunk in self._chunk_airdrop_units(holders, 100):
             airdrop_units = [holder.to_args() for holder in item_chunk]
+            logger.info(f"Airdropping {len(airdrop_units)} units to {bridged_address}")
+            logger.info(f"Units: {airdrop_units}")
             if is721:
                 tx = bridge_control.airdrop721(
                     bridged_address,
