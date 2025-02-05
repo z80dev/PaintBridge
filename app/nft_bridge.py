@@ -169,10 +169,7 @@ class NFTBridge:
     @source_chain_context
     def is_erc1155(self, address: str) -> bool:
         """Check if the contract implements ERC1155."""
-        nft_contract = Contract(
-            address,
-            abi='[{"name":"supportsInterface","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function","constant":true,"inputs":[{"internalType":"bytes4","name":"interfaceId","type":"bytes4"}],"payable":false,"signature":"0x01ffc9a7"}]',
-        )
+        nft_contract = project.ERC1155.at(address)
         return nft_contract.supportsInterface(ERC1155_INTERFACE_ID)
 
     @source_chain_context
@@ -207,8 +204,45 @@ class NFTBridge:
         data = response.json()
         return data["collection"]
 
+    # nft_bridge.py - modify set_token_uris method
     @target_chain_context
-    def set_token_uris(self, target_address: str, token_uris: List[str]) -> List:
+    def set_token_uris(self, target_address: str, token_uris: List[str], start_from: Optional[int] = None) -> List:
+        """Set token URIs for the bridged contract with optional start index."""
+        bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
+        txs = []
+
+        if len(token_uris) == 0:
+            return txs
+
+        # Let caller override start_from logic
+        if start_from is None:
+            start_from = 0
+            if token_uris[0] is None:
+                start_from = 1
+                token_uris = token_uris[1:]
+
+        chunk_size = 100
+        if token_uris:
+            first_uri = token_uris[0]
+            if first_uri is None:
+                token_uris = token_uris[1:]
+                first_uri = token_uris[0]
+            if len(first_uri) > 50 or first_uri.startswith(DATA_PREFIX):
+                chunk_size = 5
+
+        for ch in chunk(token_uris, chunk_size):
+            tx = bridge_control.batchSetTokenURIs(
+                target_address,
+                start_from,
+                ch,
+                sender=self.deployer
+            )
+            start_from += len(ch)
+            txs.append(tx)
+        return txs
+
+    # @target_chain_context
+    # def set_token_uris(self, target_address: str, token_uris: List[str]) -> List:
         """Set token URIs for the bridged contract."""
         bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
         start_from = 0
@@ -235,7 +269,7 @@ class NFTBridge:
             )
             start_from += len(ch)
             txs.append(tx)
-        return txs
+        return txs#
 
     @target_chain_context
     def get_bridged_address(self, original_address: str) -> Optional[str]:
