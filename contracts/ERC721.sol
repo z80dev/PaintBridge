@@ -13,6 +13,7 @@ contract ERC721 is ERC721Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
     string private _symbol;
     string private _baseURI;
     string private _extension;
+    uint256 private _totalSupply;
     mapping(uint256 => string) private _tokenURIs;
 
     // Custom errors
@@ -40,6 +41,10 @@ contract ERC721 is ERC721Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
 
     function symbol() public view override returns (string memory) {
         return _symbol;
+    }
+
+    function totalSupply() public virtual view returns (uint256) {
+        return _totalSupply;
     }
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
@@ -72,12 +77,14 @@ contract ERC721 is ERC721Base, ERC2981, PermissionedMintingNFT, BridgedNFT {
                 if (_exists(id)) {
                     _burn(id);
                 }
+                _totalSupply += 1;
                 _mint(airdropUnits[i].to, id);
             }
         }
     }
 
     function burn(uint256 tokenId) public mintIsOpen onlyMinter {
+        _totalSupply -= 1;
         _burn(tokenId);
     }
 

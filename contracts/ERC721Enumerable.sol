@@ -14,7 +14,7 @@ contract ERC721Enumerable is ERC721 {
     // Mapping from token ID to index in the ownedTokens mapping
     mapping(uint256 tokenId => uint256) private _ownedTokensIndex;
 
-    function totalSupply() public view returns (uint256) {
+    function totalSupply() public view override returns (uint256) {
         return _allTokens.length;
     }
 
