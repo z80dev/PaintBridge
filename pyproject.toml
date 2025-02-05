@@ -7,15 +7,19 @@ requires-python = ">=3.12"
 dependencies = [
     "ape-alchemy>=0.8.5",
     "ape-base>=0.8.1",
+    "ape-etherscan>=0.8.4",
     "ape-fantom>=0.8.3",
     "ape-foundry>=0.8.6",
     "ape-solidity>=0.8.5",
+    "ape-sonic",
     "eth-ape>=0.8.22",
     "flask>=3.1.0",
     "gunicorn>=23.0.0",
     "py-solc-x>=2.0.3",
     "python-dotenv>=1.0.1",
     "python-telegram-bot>=21.9",
+    "setuptools>=75.8.0",
+    "silverback>=0.6.5",
 ]
 
 [build-system]
@@ -27,4 +31,8 @@ tg-bot = "app.tg:main"
 lz = "app.lz:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["app"]
+packages = ["app", "bot"]
+
+[tool.uv.sources]
+ape-sonic = { path = "../ape-sonic" }
+ape-alchemy = { path = "../ape-alchemy" }
