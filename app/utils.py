@@ -2,6 +2,7 @@
 from ape import networks
 import os
 import re
+import time
 import logging
 
 flask_env = os.getenv("FLASK_ENV")
@@ -22,7 +23,7 @@ def target_chain_context(func):
             with networks.fantom.sonictest.use_provider("node"):
                 return func(*args, **kwargs)
         elif flask_env == "prod":
-            with networks.fantom.sonic.use_provider("node"):
+            with networks.sonic.mainnet.use_provider("node"):
                 return func(*args, **kwargs)
 
     return wrapper
