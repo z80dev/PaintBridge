@@ -339,7 +339,6 @@ async def reclaim(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id,
                                  text=f"Reclaim txs:\n{'\n'.join(airdrop_links)}")
 
-    await handle_uris(update, context, addr, bridged_addr, is721, "")
     logger.info(f"Reclaim completed for {addr}")
 
 async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -365,6 +364,78 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text=f"Failed to approve {address}: {str(e)}"
         )
 
+# tg.py - add new command handler
+async def seturis(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"SetURIs command received from user {update.effective_user.id}")
+    assert update.effective_chat is not None
+
+    if not context.args or len(context.args) < 2:
+        logger.warning("Invalid arguments for seturis command")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="Usage: /seturis <original_address> <start_index>"
+        )
+        return
+
+    addr = context.args[0]
+    try:
+        start_index = int(context.args[1])
+    except ValueError:
+        logger.warning(f"Invalid start index: {context.args[1]}")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="Invalid start index. Must be an integer."
+        )
+        return
+
+    logger.info(f"Starting URI set process for {addr} from index {start_index}")
+
+    bridged_address = nft_bridge.get_bridged_address(addr)
+    if not bridged_address:
+        logger.warning(f"Collection {addr} not yet bridged")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"Collection not yet bridged. Use /bridge {addr} first."
+        )
+        return
+
+    try:
+        is721 = not nft_bridge.is_erc1155(addr)  # Check if ERC1155
+        if is721:
+            logger.warning("URI reset only supported for ERC1155")
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="This command is only for ERC1155 collections."
+            )
+            return
+
+        uris = nft_bridge.get_token_uris(addr, is721=False)
+        uris = uris[start_index:]
+        uri_txs = nft_bridge.set_token_uris(bridged_address, uris, start_from=start_index)
+
+        if not uri_txs:
+            logger.info("No URIs to set")
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="No URIs to set for this collection."
+            )
+            return
+
+        uri_tx_links = [tx_hash_to_link(tx.txn_hash) for tx in uri_txs]
+        response_msg = f"URI txs starting from {start_index}:\n{'\n'.join(uri_tx_links)}"
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=response_msg
+        )
+        logger.info(f"Successfully set URIs for {addr} from index {start_index}")
+
+    except Exception as e:
+        logger.error(f"Failed to set URIs: {str(e)}", exc_info=True)
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"Failed to set URIs: {str(e)}"
+        )
+
 def main():
     logger.info("Starting NFT Bridge Bot")
     if env_vars.TG_BOT_TOKEN is None:
@@ -380,12 +451,14 @@ def main():
     approve_handler = CommandHandler('approve', approve)
     remint_handler = CommandHandler('remint', remint)
     reclaim_handler = CommandHandler('reclaim', reclaim)
+    seturis_handler = CommandHandler('seturis', seturis)  # Add this line
 
     application.add_handler(start_handler)
     application.add_handler(bridge_handler)
     application.add_handler(approve_handler)
     application.add_handler(remint_handler)
     application.add_handler(reclaim_handler)
+    application.add_handler(seturis_handler)
 
     logger.info("Starting bot polling")
     application.run_polling()
