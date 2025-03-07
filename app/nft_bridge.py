@@ -343,6 +343,88 @@ class NFTBridge:
                 current_start += len(ch)
 
         return txs
+    
+    @target_chain_context
+    def set_token_uris_direct(self, target_address: str, token_uris: List[str], start_from: int = 0) -> List:
+        """Set token URIs directly on the NFT contract, bypassing the bridge control."""
+        logger.info(f"Setting token URIs directly for {target_address}")
+        txs = []
+        
+        if len(token_uris) == 0:
+            logger.info(f"Token URIs list is empty for {target_address}")
+            return txs
+        
+        # Determine if this is ERC721 or ERC1155
+        try:
+            # Try to load as ERC721 first
+            nft_contract = project.ERC721.at(target_address)
+            is_721 = True
+        except Exception:
+            # If that fails, assume it's ERC1155
+            nft_contract = project.ERC1155.at(target_address)
+            is_721 = False
+        
+        logger.info(f"Contract type: {'ERC721' if is_721 else 'ERC1155'}")
+        
+        # Build batches handling None values
+        current_batch = []
+        current_start = start_from
+        
+        for i, uri in enumerate(token_uris):
+            logger.debug(f"Processing URI: {uri}")
+            if uri is None:
+                # Send current batch if we have one
+                if current_batch:
+                    chunk_size = 5 if len(current_batch[0]) > 50 or current_batch[0].startswith(DATA_PREFIX) else 100
+                    for ch in chunk(current_batch, chunk_size):
+                        logger.debug(f"Setting token URIs directly for {target_address} from {current_start} to {current_start + len(ch) - 1}")
+                        if is_721:
+                            # For ERC721, set URIs one by one if needed or use batch function
+                            try:
+                                tx = nft_contract.batchSetTokenURIs(current_start, ch, sender=self.deployer)
+                                txs.append(tx)
+                            except Exception as e:
+                                logger.warning(f"batchSetTokenURIs failed, setting URIs individually: {str(e)}")
+                                for j, uri in enumerate(ch):
+                                    token_id = current_start + j
+                                    logger.debug(f"Setting URI for token ID {token_id}: {uri}")
+                                    tx = nft_contract.setTokenURI(token_id, uri, sender=self.deployer)
+                                    txs.append(tx)
+                        else:
+                            # For ERC1155, use batch setting
+                            tx = nft_contract.batchSetTokenURIs(current_start, ch, sender=self.deployer)
+                            txs.append(tx)
+                        current_start += len(ch)
+                    current_batch = []
+                current_start = start_from + i + 1
+                logger.info(f"Set current_start to {current_start}")
+            else:
+                current_batch.append(uri)
+        
+        # Send final batch if exists
+        if current_batch:
+            chunk_size = 5 if len(current_batch[0]) > 50 or current_batch[0].startswith(DATA_PREFIX) else 100
+            for ch in chunk(current_batch, chunk_size):
+                logger.debug(f"Setting token URIs directly for {target_address} from {current_start} to {current_start + len(ch) - 1}")
+                if is_721:
+                    # For ERC721, set URIs one by one if needed or use batch function
+                    try:
+                        tx = nft_contract.batchSetTokenURIs(current_start, ch, sender=self.deployer)
+                        txs.append(tx)
+                    except Exception as e:
+                        logger.warning(f"batchSetTokenURIs failed, setting URIs individually: {str(e)}")
+                        for j, uri in enumerate(ch):
+                            token_id = current_start + j
+                            logger.debug(f"Setting URI for token ID {token_id}: {uri}")
+                            tx = nft_contract.setTokenURI(token_id, uri, sender=self.deployer)
+                            txs.append(tx)
+                else:
+                    # For ERC1155, use batch setting
+                    tx = nft_contract.batchSetTokenURIs(current_start, ch, sender=self.deployer)
+                    txs.append(tx)
+                current_start += len(ch)
+        
+        return txs
 
     @target_chain_context
     def get_bridged_address(self, original_address: str) -> Optional[str]:
@@ -569,3 +651,41 @@ class NFTBridge:
         """Approve or disapprove bridging for a collection."""
         bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
         return bridge_control.adminSetBridgingApproved(collection_address, approved, sender=self.deployer)
+        
+    @target_chain_context
+    def transfer_ownership(self, collection_address: str, new_owner: str):
+        """Transfer ownership of an NFT collection to a new owner.
+        
+        This function directly calls the transferOwnership function on the NFT contract,
+        bypassing the bridge contract. It's intended for admin use only, when the admin
+        wallet owns the NFT collection directly.
+        
+        Args:
+            collection_address: The address of the NFT collection to transfer ownership of
+            new_owner: The address of the new owner
+            
+        Returns:
+            Transaction receipt
+        """
+        logger.info(f"Transferring ownership of {collection_address} to {new_owner}")
+        
+        # Load the contract using its Ownable interface
+        try:
+            # Any contract with Ownable functionality will work here
+            ownable_contract = project.ERC721.at(collection_address)
+            
+            # Verify that we are the current owner
+            current_owner = ownable_contract.owner()
+            if current_owner != self.deployer.address:
+                logger.error(f"Cannot transfer ownership: deployer {self.deployer.address} is not the current owner {current_owner}")
+                raise ValueError(f"Cannot transfer ownership: deployer is not the current owner")
+                
+            # Transfer ownership
+            logger.info(f"Calling transferOwnership on {collection_address}")
+            tx = ownable_contract.transferOwnership(new_owner, sender=self.deployer)
+            logger.info(f"Ownership transferred to {new_owner}, tx: {tx.txn_hash}")
+            return tx
+            
+        except Exception as e:
+            logger.error(f"Failed to transfer ownership: {str(e)}", exc_info=True)
+            raise
