@@ -18,12 +18,24 @@ from .constants import (
 )
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger('NFTBridge')
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+# Set up file handler
+file_handler = logging.FileHandler('nft_bridge.log')
+file_handler.setLevel(logging.DEBUG)
+
+# Set up console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s')
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
+
+logger.info("Starting NFT Bridge!!!!")
 
 @dataclass
 class AirdropUnit:
@@ -31,7 +43,7 @@ class AirdropUnit:
     token_ids: List[int]
     amounts: List[int]
     is721: bool
-    data: Optional[str] = None
+    data: str = ""
 
     def to_args(self):
         if self.is721:
@@ -135,7 +147,7 @@ class NFTBridge:
             if results[-1] is None:
                 may_have_more = False
             token_uris.extend(results)
-            start += 1000
+            start += 100
 
         while token_uris and token_uris[-1] is None:
             token_uris.pop()
@@ -179,14 +191,17 @@ class NFTBridge:
         name = nft_contract.name()
         symbol = nft_contract.symbol()
 
-        tokenURI = nft_contract.tokenURI(1)
-        url_data = parse_url(tokenURI)
-        if url_data is None:
-            return name, symbol, "", False, ""
+        try:
+            tokenURI = nft_contract.tokenURI(1)
+            url_data = parse_url(tokenURI)
+            if url_data is None:
+                return name, symbol, "", False, ""
 
-        base_uri, _, extension = url_data
-        has_extension = bool(extension)
-        return name, symbol, base_uri, has_extension, extension
+            base_uri, _, extension = url_data
+            has_extension = bool(extension)
+            return name, symbol, base_uri, has_extension, extension
+        except Exception:
+            return name, symbol, "", False, ""
 
     @source_chain_context
     def get_collection_name(self, original_address: str) -> str:
@@ -197,21 +212,85 @@ class NFTBridge:
         except Exception:
             return ""
 
-    def get_collection_data_api(self, original_address: str) -> Dict:
-        """Get collection data from PaintSwap API."""
-        endpoint = f"https://api.paintswap.finance/v2/collections/{original_address}"
+    def get_collection_data_api(self, address: str) -> Dict:
+        """Get collection data from PaintSwap API.
+        
+        Works with either original or bridged address.
+        """
+        # If this is a bridged address, get the original address
+        original_address = self.get_original_address(address)
+        if original_address:
+            address = original_address
+            
+        endpoint = f"https://api.paintswap.finance/v2/collections/{address}"
+        logger.info(f"Fetching collection data from {endpoint}")
         response = requests.get(endpoint, timeout=60)
         data = response.json()
         return data["collection"]
 
-    # nft_bridge.py - modify set_token_uris method
+    @source_chain_context
+    def get_total_supply(self, original_address: str) -> int:
+        """Get the total supply of the collection."""
+        nft_contract = project.ERC721.at(original_address)
+        try:
+            return nft_contract.totalSupply()
+        except Exception:
+            return 0
+
+    @source_chain_context
+    def get_token_uris_via_erc721enumerable(self, original_address: str) -> List[tuple[int, str]]:
+        """Fetch token URIs for the given NFT contract."""
+        nft_contract = project.ERC721Enumerable.at(original_address)
+        tokenIds = []
+        token_uris = []
+        total_supply = nft_contract.totalSupply()
+
+        for i in range(total_supply):
+            tokenId = nft_contract.tokenByIndex(i)
+            tokenIds.append(tokenId)
+
+        for tokenId in tokenIds:
+            token_uris.append(nft_contract.tokenURI(tokenId))
+
+        return list(zip(tokenIds, token_uris))
+
     @target_chain_context
-    def set_token_uris(self, target_address: str, token_uris: List[str], start_from: Optional[int] = None) -> List:
-        """Set token URIs for the bridged contract with optional start index."""
+    def set_token_uris_from_tuples(self, target_address: str, token_uris: List[tuple[int, str]]):
+        logger.info(f"Setting token URIs for {target_address}")
         bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
         txs = []
 
         if len(token_uris) == 0:
+            print(f"Token URIs list is empty for {target_address}")
+            return txs
+
+        for (tokenId, uri) in token_uris:
+            logger.debug(f"Processing URI: {uri}")
+            tx = bridge_control.batchSetTokenURIs(
+                target_address,
+                tokenId,
+                [uri],
+                sender=self.deployer
+            )
+            txs.append(tx)
+
+        return txs
+
+    @target_chain_context
+    def clear_bridged_storage(self, original_address: str):
+        """Clear bridged storage for a collection."""
+        bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
+        return bridge_control.clearBridgedStorage(original_address, sender=self.deployer)
+
+    @target_chain_context
+    def set_token_uris(self, target_address: str, token_uris: List[str], start_from: Optional[int] = None) -> List:
+        """Set token URIs for the bridged contract with optional start index."""
+        logger.info(f"Setting token URIs for {target_address}")
+        bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
+        txs = []
+
+        if len(token_uris) == 0:
+            print(f"Token URIs list is empty for {target_address}")
             return txs
 
         # Let caller override start_from logic
@@ -221,55 +300,49 @@ class NFTBridge:
                 start_from = 1
                 token_uris = token_uris[1:]
 
-        chunk_size = 100
-        if token_uris:
-            first_uri = token_uris[0]
-            if first_uri is None:
-                token_uris = token_uris[1:]
-                first_uri = token_uris[0]
-            if len(first_uri) > 50 or first_uri.startswith(DATA_PREFIX):
-                chunk_size = 5
+        # Build batches handling None values
+        current_batch = []
+        current_start = start_from
 
-        for ch in chunk(token_uris, chunk_size):
-            tx = bridge_control.batchSetTokenURIs(
-                target_address,
-                start_from,
-                ch,
-                sender=self.deployer
-            )
-            start_from += len(ch)
-            txs.append(tx)
+        for i, uri in enumerate(token_uris):
+            logger.debug(f"Processing URI: {uri}")
+            if uri is None:
+                # Send current batch if we have one
+                if current_batch:
+                    chunk_size = 5 if len(current_batch[0]) > 50 or current_batch[0].startswith(DATA_PREFIX) else 100
+                    for ch in chunk(current_batch, chunk_size):
+                        logger.debug(f"Setting token URIs for {target_address} from {current_start} to {current_start + len(ch) - 1}")
+                        logger.info(f"Setting token URIs for {target_address} from {current_start} to {current_start + len(ch) - 1}")
+                        print(f"Setting token URIs for {target_address} from {current_start} to {current_start + len(ch) - 1}")
+                        tx = bridge_control.batchSetTokenURIs(
+                            target_address,
+                            current_start,
+                            ch,
+                            sender=self.deployer
+                        )
+                        txs.append(tx)
+                        current_start += len(ch)
+                    current_batch = []
+                current_start = start_from + i + 1
+                logger.info(f"Set current_start to {current_start}")
+            else:
+                current_batch.append(uri)
+
+        # Send final batch if exists
+        if current_batch:
+            chunk_size = 5 if len(current_batch[0]) > 50 or current_batch[0].startswith(DATA_PREFIX) else 100
+            for ch in chunk(current_batch, chunk_size):
+                logger.debug(f"Setting token URIs for {target_address} from {current_start} to {current_start + len(ch) - 1}")
+                tx = bridge_control.batchSetTokenURIs(
+                    target_address,
+                    current_start,
+                    ch,
+                    sender=self.deployer
+                )
+                txs.append(tx)
+                current_start += len(ch)
+
         return txs
-
-    # @target_chain_context
-    # def set_token_uris(self, target_address: str, token_uris: List[str]) -> List:
-        """Set token URIs for the bridged contract."""
-        bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
-        start_from = 0
-        txs = []
-
-        if len(token_uris) == 0:
-            return txs
-
-        if token_uris[0] is None:
-            start_from = 1
-            token_uris = token_uris[1:]
-
-        chunk_size = 100
-        first_uri = token_uris[0]
-        if len(first_uri) > 50 or first_uri.startswith(DATA_PREFIX):
-            chunk_size = 5
-
-        for ch in chunk(token_uris, chunk_size):
-            tx = bridge_control.batchSetTokenURIs(
-                target_address,
-                start_from,
-                ch,
-                sender=self.deployer
-            )
-            start_from += len(ch)
-            txs.append(tx)
-        return txs#
 
     @target_chain_context
     def get_bridged_address(self, original_address: str) -> Optional[str]:
@@ -277,6 +350,45 @@ class NFTBridge:
         bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
         bridged_address = bridge_control.bridgedAddressForOriginal(original_address)
         return None if bridged_address == ZERO_ADDR else bridged_address
+        
+    @target_chain_context
+    def get_original_address(self, bridged_address: str) -> Optional[str]:
+        """Get the original contract address for a bridged contract."""
+        bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
+        original_address = bridge_control.originalAddressForBridged(bridged_address)
+        return None if original_address == ZERO_ADDR else original_address
+
+    def resolve_original_address(self, address: str) -> Optional[str]:
+        """Resolve an address to its original address.
+        
+        If the address is already an original address, returns it.
+        If the address is a bridged address, returns the corresponding original address.
+        Returns None if no matching original address is found.
+        """
+        # First check if this is already an original address with a bridged version
+        if self.get_bridged_address(address):
+            return address
+            
+        # Otherwise check if this is a bridged address
+        original = self.get_original_address(address)
+        if original:
+            return original
+            
+        # Neither - could be an unbridged original address or an invalid address
+        return None
+        
+    @target_chain_context
+    def is_collection_approved(self, address: str) -> bool:
+        """Check if the collection is approved for bridging.
+        
+        Works with either original or bridged address.
+        """
+        original_address = self.get_original_address(address)
+        if original_address:
+            address = original_address
+            
+        bridge_control = project.SCCNFTBridge.at(self.bridge_control_address)
+        return bridge_control.bridgingApproved(address)
 
     @target_chain_context
     def deploy_1155(
@@ -351,14 +463,22 @@ class NFTBridge:
             sender=self.deployer
         )
 
-    def get_holders_via_api(self, original_address: str) -> Dict[str, AirdropUnit]:
-        """Get token holders from PaintSwap API."""
+    def get_holders_via_api(self, address: str) -> Dict[str, AirdropUnit]:
+        """Get token holders from PaintSwap API.
+        
+        Works with either original or bridged address.
+        """
+        # If this is a bridged address, get the original address
+        original_address = self.get_original_address(address)
+        if original_address:
+            address = original_address
+            
         num_to_skip = 0
         done = False
         holders_dict = {}
 
         while not done:
-            url = f"https://api.paintswap.finance/v2/userNFTs?requireUser=false&collections={original_address}&numToSkip={num_to_skip}&numToFetch=1000&orderBy=tokenId"
+            url = f"https://api.paintswap.finance/v2/userNFTs?requireUser=false&collections={address}&numToSkip={num_to_skip}&numToFetch=1000&orderBy=tokenId"
             response = requests.get(url, timeout=60)
             data = response.json()
 
@@ -424,8 +544,8 @@ class NFTBridge:
         is721 = holders[0].is721
         txs = []
 
-        for item_chunk in self._chunk_airdrop_units(holders, 100):
-            airdrop_units = [holder.to_args() for holder in item_chunk]
+        for item_chunk in self._chunk_airdrop_units(holders, 50):
+            airdrop_units: List[AirdropUnit] = [holder.to_args() for holder in item_chunk]
             logger.info(f"Airdropping {len(airdrop_units)} units to {bridged_address}")
             logger.info(f"Units: {airdrop_units}")
             if is721:

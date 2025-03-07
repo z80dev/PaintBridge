@@ -26,7 +26,7 @@ logger.addHandler(file_handler)
 
 ape_logger.set_level(LogLevel.ERROR)
 
-logger.info("Initializing NFT Bridge...")
+logger.info("Initializing NFT Bridge!")
 nft_bridge = NFTBridge(
     env_vars.DEPLOYER_NAME,
     env_vars.DEPLOYER_PASSWORD,
@@ -59,7 +59,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 - Must have had a sale in the last 6 months
 - Must have been approved for bridging (by collection owner or admin)
 Use /approve <address> to approve a collection for bridging
-Use /bridge <address> to bridge a collection"""
+Use /bridge <address> to bridge a collection
+Use /clear <address> to clear bridged storage (admin only)
+Optional parameters:
+- owner:<address> - Override the owner address
+- override - Skip requirement checks"""
     await context.bot.send_message(chat_id=update.effective_chat.id, text=msg_str)
     logger.debug("Start message sent successfully")
 
@@ -84,11 +88,11 @@ async def validate_collection(update, context, addr, collection_data):
                                      text=f"Collection has too many owners: {addr}")
         return False
 
-    if not last_sale_within_six_months(collection_data):
-        logger.warning(f"Collection {addr} has no recent sales")
-        await context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=f"Collection has not been sold in 6 months: {addr}")
-        return False
+    # if not last_sale_within_six_months(collection_data):
+    #     logger.warning(f"Collection {addr} has no recent sales")
+    #     await context.bot.send_message(chat_id=update.effective_chat.id,
+    #                                  text=f"Collection has not been sold in 6 months: {addr}")
+    #     return False
 
     logger.info(f"Collection {addr} passed all validation checks")
     return True
@@ -174,18 +178,47 @@ async def bridge(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                      text="Please provide an address to bridge.")
         return
 
-    addr = context.args[0]
-    logger.info(f"Starting bridge process for address: {addr}")
+    # Get input address (only accept original address for bridge command)
+    input_addr = context.args[0]
+    logger.info(f"Starting bridge process for address: {input_addr}")
 
     if len(context.args) > 1:
         logger.info(f"Additional arguments provided: {context.args[1:]}")
 
-    override_requirements = len(context.args) > 1 and context.args[1] == "override"
+    # Parse additional arguments
+    override_requirements = False
+    owner_override = None
 
+    for arg in context.args[1:]:
+        if arg == "override":
+            override_requirements = True
+        elif arg.startswith("owner:"):
+            owner_override = arg.split(":")[1]
+            logger.info(f"Owner override provided: {owner_override}")
+
+    # Check if this is a bridged address
+    original_from_bridged = nft_bridge.get_original_address(input_addr)
+    if original_from_bridged:
+        # This is a bridged address, so let's use the original address instead
+        logger.info(f"Input address {input_addr} is a bridged address, using original address {original_from_bridged}")
+        addr = original_from_bridged
+        bridged_addr = input_addr
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                    text=f"Already bridged. Original: {addr}, Bridged: {bridged_addr}. Use /remint {addr} to remint tokens to current holders.")
+        return
+    else:
+        addr = input_addr
+    
     if bridged_addr := nft_bridge.get_bridged_address(addr):
         logger.info(f"Collection {addr} already bridged to {bridged_addr}")
         await context.bot.send_message(chat_id=update.effective_chat.id,
                                     text=f"Already bridged to {bridged_addr}. Use /remint {addr} to remint tokens to current holders.")
+        return
+
+    if not nft_bridge.is_collection_approved(addr):
+        logger.warning(f"Collection {addr} not approved for bridging")
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                    text=f"Collection not approved for bridging: {addr}")
         return
 
     collection_data = nft_bridge.get_collection_data_api(addr)
@@ -194,8 +227,11 @@ async def bridge(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     logger.info(f"Starting bridging process for collection {addr}")
+    msg = f"Bridging collection {addr}\n"
+    if owner_override:
+        msg += f"Owner override: {owner_override}\n"
     await context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text=f"Bridging collection {addr}\n")
+                                 text=msg)
 
     holders = nft_bridge.get_holders_via_api(addr)
     airdrop_units = list(holders.values())
@@ -207,6 +243,9 @@ async def bridge(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     original_owner = nft_bridge.get_collection_owner(addr)
     logger.info(f"Original collection owner: {original_owner}")
+
+    original_owner = owner_override or nft_bridge.get_collection_owner(addr)
+    logger.info(f"Using owner address: {original_owner} {'(override)' if owner_override else '(original)'}")
 
     deployment_tx, base_uri = await handle_deployment(update, context, addr, is721,
                                                     original_owner, royalty_data)
@@ -253,24 +292,34 @@ async def remint(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                      text="Please provide an address to remint.")
         return
 
-    addr = context.args[0]
-    logger.info(f"Starting remint process for {addr}")
+    # Get input address and handle both original and bridged addresses
+    input_addr = context.args[0]
+    logger.info(f"Starting remint process for input address: {input_addr}")
+    
+    # Resolve to original address - works with either original or bridged address
+    original_addr = nft_bridge.resolve_original_address(input_addr)
+    if not original_addr:
+        logger.warning(f"Could not resolve to a valid original address: {input_addr}")
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=f"Collection not yet bridged. Use /bridge {input_addr} first.")
+        return
+        
+    # Get the bridged address from the resolved original address
+    bridged_addr = nft_bridge.get_bridged_address(original_addr)
+    if not bridged_addr:
+        logger.warning(f"Collection {original_addr} not yet bridged")
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=f"Collection not yet bridged. Use /bridge {input_addr} first.")
+        return
 
     override_requirements = len(context.args) > 1 and context.args[1] == "override"
 
-    bridged_addr = nft_bridge.get_bridged_address(addr)
-    if not bridged_addr:
-        logger.warning(f"Collection {addr} not yet bridged")
-        await context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=f"Collection not yet bridged. Use /bridge {addr} first.")
+    collection_data = nft_bridge.get_collection_data_api(original_addr)
+    if not override_requirements and not await validate_collection(update, context, original_addr, collection_data):
+        logger.warning(f"Collection validation failed for remint of {original_addr}")
         return
 
-    collection_data = nft_bridge.get_collection_data_api(addr)
-    if not override_requirements and not await validate_collection(update, context, addr, collection_data):
-        logger.warning(f"Collection validation failed for remint of {addr}")
-        return
-
-    holders = nft_bridge.get_holders_via_api(addr)
+    holders = nft_bridge.get_holders_via_api(original_addr)
     airdrop_units = list(holders.values())
     is721 = airdrop_units[0].is721
     logger.info(f"Reminting for {len(holders)} holders")
@@ -280,8 +329,8 @@ async def remint(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id,
                                  text=f"Remint txs:\n{'\n'.join(airdrop_tx_links)}")
 
-    await handle_uris(update, context, addr, bridged_addr, is721, "")
-    logger.info(f"Remint process completed successfully for {addr}")
+    await handle_uris(update, context, original_addr, bridged_addr, is721, "")
+    logger.info(f"Remint process completed successfully for {original_addr}")
 
 async def reclaim(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"Reclaim command received from user {update.effective_user.id}")
@@ -293,27 +342,37 @@ async def reclaim(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                      text="Please provide an address to reclaim.")
         return
 
-    addr = context.args[0]
-    logger.info(f"Starting reclaim process for {addr}")
-
-    bridged_addr = nft_bridge.get_bridged_address(addr)
-    if not bridged_addr:
-        logger.warning(f"Collection {addr} not yet bridged")
+    # Get input address and handle both original and bridged addresses
+    input_addr = context.args[0]
+    logger.info(f"Starting reclaim process for input address: {input_addr}")
+    
+    # Resolve to original address - works with either original or bridged address
+    original_addr = nft_bridge.resolve_original_address(input_addr)
+    if not original_addr:
+        logger.warning(f"Could not resolve to a valid original address: {input_addr}")
         await context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=f"Collection not yet bridged. Use /bridge {addr} first.")
+                                     text=f"Collection not yet bridged. Use /bridge {input_addr} first.")
+        return
+        
+    # Get the bridged address from the resolved original address
+    bridged_addr = nft_bridge.get_bridged_address(original_addr)
+    if not bridged_addr:
+        logger.warning(f"Collection {original_addr} not yet bridged")
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=f"Collection not yet bridged. Use /bridge {input_addr} first.")
         return
 
     override_requirements = len(context.args) > 1 and context.args[1] == "override"
-    collection_data = nft_bridge.get_collection_data_api(addr)
-    if not override_requirements and not await validate_collection(update, context, addr, collection_data):
-        logger.warning(f"Collection validation failed for reclaim of {addr}")
+    collection_data = nft_bridge.get_collection_data_api(original_addr)
+    if not override_requirements and not await validate_collection(update, context, original_addr, collection_data):
+        logger.warning(f"Collection validation failed for reclaim of {original_addr}")
         return
 
-    holders = nft_bridge.get_holders_via_api(addr)
+    holders = nft_bridge.get_holders_via_api(original_addr)
     if not holders:
-        logger.warning(f"No holders found for {addr}")
+        logger.warning(f"No holders found for {original_addr}")
         await context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=f"No holders found for {addr}.")
+                                     text=f"No holders found for {original_addr}.")
         return
 
     is721 = list(holders.values())[0].is721
@@ -339,7 +398,7 @@ async def reclaim(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id,
                                  text=f"Reclaim txs:\n{'\n'.join(airdrop_links)}")
 
-    logger.info(f"Reclaim completed for {addr}")
+    logger.info(f"Reclaim completed for {original_addr}")
 
 async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"Approve command received from user {update.effective_user.id}")
@@ -364,7 +423,6 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text=f"Failed to approve {address}: {str(e)}"
         )
 
-# tg.py - add new command handler
 async def seturis(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"SetURIs command received from user {update.effective_user.id}")
     assert update.effective_chat is not None
@@ -373,11 +431,12 @@ async def seturis(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.warning("Invalid arguments for seturis command")
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text="Usage: /seturis <original_address> <start_index>"
+            text="Usage: /seturis <address> <start_index>"
         )
         return
 
-    addr = context.args[0]
+    # Get input address and handle both original and bridged addresses
+    input_addr = context.args[0]
     try:
         start_index = int(context.args[1])
     except ValueError:
@@ -388,29 +447,41 @@ async def seturis(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    logger.info(f"Starting URI set process for {addr} from index {start_index}")
-
-    bridged_address = nft_bridge.get_bridged_address(addr)
-    if not bridged_address:
-        logger.warning(f"Collection {addr} not yet bridged")
+    logger.info(f"Starting URI set process for input address: {input_addr} from index {start_index}")
+    
+    # Resolve to original address - works with either original or bridged address
+    original_addr = nft_bridge.resolve_original_address(input_addr)
+    if not original_addr:
+        logger.warning(f"Could not resolve to a valid original address: {input_addr}")
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"Collection not yet bridged. Use /bridge {addr} first."
+            text=f"Collection not yet bridged. Use /bridge {input_addr} first."
+        )
+        return
+        
+    # Get the bridged address from the resolved original address
+    bridged_address = nft_bridge.get_bridged_address(original_addr)
+    if not bridged_address:
+        logger.warning(f"Collection {original_addr} not yet bridged")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"Collection not yet bridged. Use /bridge {input_addr} first."
         )
         return
 
-    try:
-        is721 = not nft_bridge.is_erc1155(addr)  # Check if ERC1155
-        if is721:
-            logger.warning("URI reset only supported for ERC1155")
-            await context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text="This command is only for ERC1155 collections."
-            )
-            return
+    # uris = nft_bridge.get_token_uris_via_erc721enumerable(original_addr)
+    # nft_bridge.set_token_uris_from_tuples(bridged_address, uris)
+    # logger.info(f"Successfully set URIs for {original_addr} from index {start_index}")
+    # return
 
-        uris = nft_bridge.get_token_uris(addr, is721=False)
+    try:
+        is721 = not nft_bridge.is_erc1155(original_addr)  # Check if ERC1155
+
+        uris = nft_bridge.get_token_uris(original_addr, is721=is721)
+        logger.info(f"Total URIs: {len(uris)}")
+        logger.info(f"{uris}")
         uris = uris[start_index:]
+        logger.info("calling set_token_uris")
         uri_txs = nft_bridge.set_token_uris(bridged_address, uris, start_from=start_index)
 
         if not uri_txs:
@@ -427,13 +498,58 @@ async def seturis(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=update.effective_chat.id,
             text=response_msg
         )
-        logger.info(f"Successfully set URIs for {addr} from index {start_index}")
+        logger.info(f"Successfully set URIs for {original_addr} from index {start_index}")
 
     except Exception as e:
         logger.error(f"Failed to set URIs: {str(e)}", exc_info=True)
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=f"Failed to set URIs: {str(e)}"
+        )
+
+async def clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"Clear command received from user {update.effective_user.id}")
+    assert update.effective_chat is not None
+
+    if not context.args:
+        logger.warning("No address provided for clear command")
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text="Please provide an address to clear bridged storage.")
+        return
+
+    # Get input address and handle both original and bridged addresses
+    input_addr = context.args[0]
+    logger.info(f"Starting clear process for input address: {input_addr}")
+    
+    try:
+        # Resolve to original address - works with either original or bridged address
+        original_addr = nft_bridge.resolve_original_address(input_addr)
+        if not original_addr:
+            logger.warning(f"Could not resolve to a valid original address: {input_addr}")
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                         text=f"Collection not bridged: {input_addr}")
+            return
+            
+        # Get the bridged address from the resolved original address
+        bridged_addr = nft_bridge.get_bridged_address(original_addr)
+        if not bridged_addr:
+            logger.warning(f"Collection {original_addr} not bridged")
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                         text=f"Collection not bridged: {input_addr}")
+            return
+
+        tx = nft_bridge.clear_bridged_storage(original_addr)
+        logger.info(f"Successfully cleared bridged storage for {original_addr}")
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"Successfully cleared bridged storage for {original_addr}\nTx: {tx_hash_to_link(tx.txn_hash)}"
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to clear bridged storage for {input_addr}: {str(e)}", exc_info=True)
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"Failed to clear bridged storage: {str(e)}"
         )
 
 def main():
@@ -452,6 +568,7 @@ def main():
     remint_handler = CommandHandler('remint', remint)
     reclaim_handler = CommandHandler('reclaim', reclaim)
     seturis_handler = CommandHandler('seturis', seturis)  # Add this line
+    clear_handler = CommandHandler('clear', clear)  # Add this line
 
     application.add_handler(start_handler)
     application.add_handler(bridge_handler)
@@ -459,6 +576,7 @@ def main():
     application.add_handler(remint_handler)
     application.add_handler(reclaim_handler)
     application.add_handler(seturis_handler)
+    application.add_handler(clear_handler)  # Add this line
 
     logger.info("Starting bot polling")
     application.run_polling()
